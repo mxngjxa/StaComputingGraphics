@@ -1,0 +1,110 @@
+---
+title: "Logical Operators and Flight Data - Class Notes"
+author: "Jacky Guan"
+date: "2023-09-21"
+output: html_document
+---
+
+#### Lab Exercise for `nycflights13` data set
+```{r setup}
+library(tidyverse)
+library(nycflights13)
+tibble(flights)
+```
+
+## `near()` to approximate for boolean operators
+
+```{r near}
+sqrt(2)^2 == 2
+near(sqrt(2)^2, 2)
+```
+
+## Comparing with `&` and `&&``
+
+While `&` compares data entries by index, `&&` will only compare data sets as a whole.
+
+```{r &}
+c(5, 2, 3) & c(5, 1, 1)
+c(5, 2, 3) && c(5, 1, 1)
+
+```
+
+The warning message forces non-zero vectors into a `True` statement. 
+
+# Lab Exercises
+
+## a) Find all flights that depart from JFK and land on ORD or CVG (Chicago or Dallas).
+
+```{r JFK_D/C}
+l1 <- filter(flights, origin == "JFK", dest == "ORD" | dest == "CVG")
+tibble(l1)
+```
+
+## b) Find all flights that flied a distance between 200 and 500 miles.
+
+*Note that one cannot use the between operator like in python. One has to use the `between` operator*
+
+```{r 2/5}
+l2 <- filter(flights, between(distance, 200, 500))
+tibble(l2)
+```
+
+## c) Plot the histogram of departure time for filtered data either in a) or b).
+
+### For a)
+
+```{r hist.a}
+ggplot(l1) +
+    geom_histogram(aes(x = dep_time/100, fill = carrier), binwidth = 1)
+```
+
+## How many flights have a missing plane tail number? What is the percentage of flights with a missing plane tail number?
+
+```{r missing_tail_number}
+tailna <- filter(flights, is.na(tailnum))
+nrow(tailna)/nrow(flights)
+```
+
+
+## For `EV`, during which month were most flights canceled?
+
+```{r canceled_flights}
+canceled_flights <- filter(flights, is.na(dep_time))
+ggplot(canceled_flights) + 
+  geom_bar(aes(carrier)) +
+  labs(title = "Canceled Flights by Carrier", 
+       x = "Carrier (in abbreviation)",
+       y = "Counts")
+
+
+ggplot(canceled_flights) +
+  geom_bar(aes(month))
+```
+
+## What was the longest travel distance for any flight in our data set? What was the origin and the destination?
+
+```{r longest_flight}
+arrange(flights, desc(air_time))
+```
+
+The longest flight was from `EWR` to `HNL`. Where is `HNL`? Intuitionally, it should be Hawaii.
+
+```{r hnl}
+filter(airports, faa == "HNL")
+```
+
+`HNL` is going to be Honolulu International Airport. 
+
+## What was the shortest air time for any flight (that actually finished the trip) in our data set? What was the origin and the destination?
+
+```{r short_airtime}
+arrange(flights, desc(air_time))
+```
+
+The `origin` was from `EWR` to `BDL`. Where is `BDL`?
+
+```{r bdl}
+filter(airports, faa == "BDL")
+```
+
+`BDL` is going to be Bradley International Airport. 

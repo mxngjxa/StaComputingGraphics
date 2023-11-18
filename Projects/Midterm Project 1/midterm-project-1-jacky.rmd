@@ -1,0 +1,1475 @@
+---
+title: "STA305 MIDTERM PROJECT #1"
+author: 'Jacky Guan'
+date: 'Oct 31st, 2023'
+output: pdf_document
+---
+
+Loading required libraries, setting local working directory for reference.
+
+```{r setwd, message=FALSE, eval = FALSE}
+setwd("Documents/SEM\ 3/STA\ 305/Projects/Midterm\ Project\ 1")
+```
+```{r setup, message=FALSE}
+library(tidyverse)
+library(ggridges)
+obesity <- read.csv("./obesity_dataset.csv")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+
+
+# Required Tasks
+
+
+## (a) Load the data set into Rstudio and name it obesity, then create a new column named BMI following the formula given in the article. After creating BMI (you must do it correctly), execute the following code to reorder the categories of obesity level and change its name to obesity_level.
+##### The numeric BMI and the categorized obesity_level that measure the level of obesity will serve as our target variables.
+
+During initialization, a majority of the components in the obesity dataset was renamed due to the lack of clarity present in the original dataset. 
+
+```{r BMI_init}
+obesity <- obesity %>%
+  mutate(Weight, Height, bmi = (Weight / (Height**2)))
+
+obesity <- obesity %>%
+  mutate(NObeyesdad = fct_reorder(NObeyesdad, bmi)) %>%
+  rename(obesity_level = NObeyesdad) %>%
+  rename(
+    gender = Gender,
+    age = Age,
+    height = Height,
+    weight = Weight,
+    fam_hist = family_history_with_overweight,
+    high_cal = FAVC,
+    freq_vegetable = FCVC,
+    meal_count = NCP,
+    snack = CAEC,
+    activity = FAF,
+    smoke = SMOKE,
+    water = CH2O,
+    monitor_calorie = SCC,
+    screen_time = TUE,
+    alcohol = CALC,
+    transportation = MTRANS
+  )
+```
+
+At the same time, 5 variables were transformed into categorical variables for improved visualization and clarity. 
+A copy of the original dataset prior to data transformation is kept and named `unfiltered_obesity`.
+
+```{r tidying, message=FALSE}
+unfiltered_obesity <- obesity
+
+obesity <- obesity %>%
+  mutate(
+         freq_vegetable = case_when(
+           freq_vegetable < 1.5  ~ "Never",
+           between(freq_vegetable, 1.5, 2.5)  ~ "Sometimes",
+           freq_vegetable >= 2.5  ~ "Always"
+         ),
+         meal_count = case_when(
+           meal_count < 1.5  ~ "1-2 meals",
+           between(meal_count, 1.5, 2.5)  ~ "3 meals",
+           meal_count >= 2.5  ~ "More than 3 meals"
+         ),
+         water = case_when(
+           water < 1.5  ~ "Less than 1 liter",
+           between(water, 1.5, 2.5)  ~ "Between 1 and 2 liters",
+           water >= 2.5  ~ "More than 2 liters"
+         ),
+         activity = case_when(
+           activity < 0.5  ~ "Never",
+           between(activity, 0.5, 1.5)  ~ "1-2 days",
+           between(activity, 1.5, 2.5)  ~ "2-4 days",
+           activity >= 2.5  ~ "4-5 days"
+         ),
+         screen_time = case_when(
+           screen_time < 0.5  ~ "0–2 hours",
+           between(screen_time, 0.5, 1.5)  ~ "3-5 hours",
+           screen_time >= 1.5  ~ "More than 5 hours"
+         ))
+```
+
+
+
+
+## (b) Explore the distribution properly of each variable in the data set.
+
+
+
+The provided data set contains information on obesity levels in individuals from Mexico, Peru, and Colombia. 
+It includes 17 different attributes and a total of 2111 records. 
+Each record is labeled with a class variable called "NObesity" which categorizes individuals into different obesity levels, including 
+Insufficient Weight, Normal Weight, Overweight Level I, Overweight Level II, Obesity Type I, Obesity Type II, and Obesity Type III. 
+
+
+
+The data set was created using a combination of synthetic generation (77% of the data) through the Weka tool and the SMOTE filter, 
+and direct collection from users through a web platform (23% of the data). Direct collection was performed using a web tool and performed on persons between 
+the ages of 14 and 61, with diverse eating habits and physical conditions. 
+This data can be utilized to develop intelligent computational tools for identifying an individual's obesity level, 
+as well as for building recommender systems aimed at monitoring obesity levels. 
+
+
+
+This project is aimed at exploring the relationship between a number of categorical and numeric variables, unique to a person in question, and 
+a person's BMI. According to the CDC, 
+> Body Mass Index (BMI) is a person’s weight in kilograms (or pounds) divided by the square of height in meters (or feet). 
+> A high BMI can indicate high body fatness. BMI screens for weight categories that may lead to health problems, but it does not diagnose the body fatness or health of an individual.
+With the exception of Weight, Height, and Age, all variables contained in the dataset were categorical and are summarized below using barplots. 
+Continous variables are represented below with density plots and histograms. Preliminary observations attribute to the conclusion that 
+most people in the dataset, are overweight or obese. At the same time, variables can be seperated into 3 categories. 
+
+
+Based on common knowledge, variables with a strong, direct relationship with obesity include:
+
+* Weight
+* Family History of Obesity
+* High-calorie Food Consumption
+
+
+variables with a intermediate, direct relationship with obesity include:
+
+* Age
+* Number of Meals per Day
+* BMI Monitoring
+* Method of Transportation
+
+while variables with a weak/slightly inverse relationship with obesity include:
+
+* Gender
+* Height
+* Smoking
+* Vegetable Consumption
+* Water Consumption
+* Alcohol Consumption
+* Use of Technological devices
+* Alcohol Consumption
+
+
+
+
+### Gender
+
+Gender is distributed evenly in the dataset. 
+
+```{r Gender}
+gender_df <- obesity %>%
+  group_by(gender) %>%
+  summarise(gender, count = n()) %>%
+  distinct(gender, .keep_all = TRUE)
+
+ggplot(gender_df, aes(gender, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = gender)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Distribution of Gender in Obesity Dataset",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### Age
+
+The majority of people in the dataset are under 30.
+
+```{r Age}
+ggplot(obesity, aes(age)) +
+  geom_histogram(
+                 aes(y = ..density..),
+                 bins = 45,
+                 color = "black",
+                 fill = "white",
+                 alpha = 0.4) +
+  geom_density(size = 2, color = "royalblue4", fill = "skyblue1", alpha = 0.6) +
+  scale_y_continuous(labels = scales::label_number(scale = 2111)) +
+  labs(x = "Age (years)",
+       y = "Frequency",
+       title = "Distribution of Age in Obesity Dataset",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### Height
+
+The dataset is distributed fairly normally with an average height of around 1.7 meters. 
+
+```{r Height}
+ggplot(obesity, aes(height)) +
+  geom_histogram(
+                 aes(y = ..density..),
+                 bins = 45,
+                 color = "black",
+                 fill = "white",
+                 alpha = 0.4) +
+  geom_density(size = 2, color = "purple4", fill = "plum1", alpha = 0.5) +
+  scale_y_continuous(labels = scales::label_number(scale = 2111 / 100)) +
+  labs(x = "Height of Participant (Meters)",
+       y = "Frequency",
+       title = "Distribution of Height in Obesity Dataset",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### Weight
+
+While the dataset posesses a mean weight of 87 Kilograms, the standard deviation is 26 kg, meaning that the distribution is relatively broad.
+
+```{r Weight}
+ggplot(obesity, aes(weight)) +
+  geom_histogram(
+                 aes(y = ..density..),
+                 bins = 60,
+                 color = "black",
+                 fill = "white",
+                 alpha = 0.4) +
+  geom_density(size = 2, color = "seagreen4", fill = "palegreen", alpha = 0.4) +
+  scale_y_continuous(labels = scales::label_number(scale = 2111)) +
+  labs(x = "Weight of Participant (Kilograms)",
+       y = "Frequency",
+       title = "Distribution of Weight in Obesity Dataset",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### family_history_with_overweight
+
+Roughly 81% of the dataset consist of those who have a family history of being overweight. 
+
+```{r family_history_with_overweight}
+fam_hist_df <- obesity %>%
+  group_by(fam_hist) %>%
+  summarise(fam_hist, count = n()) %>%
+  distinct(fam_hist, .keep_all = TRUE)
+
+ggplot(fam_hist_df, aes(fam_hist, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = fam_hist)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Family History of Being Overweight",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### FAVC (Frequent consumption of high caloric foods)
+
+Roughly 88% of the dataset consists of those who consume high-caloric food.
+
+```{r FAVC}
+high_cal_df <- obesity %>%
+  group_by(high_cal) %>%
+  summarise(high_cal, count = n()) %>%
+  distinct(high_cal, .keep_all = TRUE)
+
+ggplot(high_cal_df, aes(high_cal, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = high_cal)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "High-Calorie Food Consumption",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### FCVC (Frequency of consumption of vegetables)
+
+Roughly 95% of the dataset consists of those who sometimes or always eat vegetables. Of said 95%, 50% sometimes eats vegetables while 50% always consumes vegetables as a part of their diet.
+
+
+```{r FCVC}
+freq_vegetable_df <- obesity %>%
+  group_by(freq_vegetable) %>%
+  summarise(freq_vegetable, count = n()) %>%
+  distinct(freq_vegetable, .keep_all = TRUE)
+
+ggplot(freq_vegetable_df, aes(freq_vegetable, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = freq_vegetable)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Vegetable Consumption Frequency",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### NCP (Number of main meals)
+
+Roughly 76% of the dataset consists of those who eat more than 3 meals per day. 
+
+```{r NCP}
+meal_count_df <- obesity %>%
+  group_by(meal_count) %>%
+  summarise(count = n()) %>%
+  distinct(meal_count, .keep_all = TRUE) %>%
+  mutate(meal_count = fct_relevel(meal_count,
+                                  "1-2 meals", "3 meals", "More than 3 meals"))
+
+ggplot(meal_count_df, aes(meal_count, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = meal_count)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Daily Main Meal Count",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### CAEC (Consumption of food between meals)
+
+Roughly 84% of the dataset consists of those who sometimes consumes snacks betweeen their meals, while 97.6% of those surveyed consume snacks. 
+
+```{r CAEC}
+snack_df <- obesity %>%
+  group_by(snack) %>%
+  summarise(snack, count = n()) %>%
+  distinct(snack, .keep_all = TRUE)
+
+ggplot(snack_df, aes(snack, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = snack)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Intermeal Snacking Frequency",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### FAF (Physical activity frequency)
+
+Rougly 70% of datapoints in the dataset either never exercise or only exercise once or twice weekly. 
+
+```{r FAF}
+activity_df <- obesity %>%
+  group_by(activity) %>%
+  summarise(count = n()) %>%
+  distinct(activity, .keep_all = TRUE) %>%
+  mutate(activity = fct_relevel(activity,
+                                "Never", "1-2 days", "2-4 days", "4-5 days"))
+
+ggplot(activity_df, aes(activity, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = activity)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Weekly Physical Activity Frequency",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### SMOKE
+
+97.9% of datapoints consists of people who do not smoke. 
+
+```{r SMOKE}
+smoke_df <- obesity %>%
+  group_by(smoke) %>%
+  summarise(smoke, count = n()) %>%
+  distinct(smoke, .keep_all = TRUE)
+
+ggplot(smoke_df, aes(smoke, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = smoke)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Smoking Habits Among Participants",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### CH2O (Daily water consumption)
+
+Roughly 76% of people drink water than the daily reconmended average. According to the National Academies of Sciences, Engineering, 
+and Medicine determined that an adequate amount of daily fluid intake is:
+> About 15.5 cups (3.7 liters) of fluids a day for men and 
+> About 11.5 cups (2.7 liters) of fluids a day for women
+
+```{r CH2O}
+water_df <- obesity %>%
+  group_by(water) %>%
+  summarise(water, count = n()) %>%
+  distinct(water, .keep_all = TRUE)
+
+ggplot(water_df, aes(water, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = water)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Daily Water Consumption",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### SCC (Calories consumption monitoring)
+
+Roughly 95% of datapoints in the obesity dataset consists of people who do not monitor their calorie intake. 
+
+```{r SCC}
+monitor_calorie_df <- obesity %>%
+  group_by(monitor_calorie) %>%
+  summarise(monitor_calorie, count = n()) %>%
+  distinct(monitor_calorie, .keep_all = TRUE)
+
+ggplot(monitor_calorie_df, aes(monitor_calorie, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = monitor_calorie)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Calorie Monitoring (Yes/No)",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### TUE (Time using technology devices)
+
+Roughly 88% of all datapoints in the dataset consists of people who use technological devices for less than 5 hours per day. 
+
+```{r TUE}
+screen_time_df <- obesity %>%
+  group_by(screen_time) %>%
+  summarise(screen_time, count = n()) %>%
+  distinct(screen_time, .keep_all = TRUE)
+
+ggplot(screen_time_df, aes(screen_time, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = screen_time)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Screen Time",
+       y = "Responses",
+       title = "Duration of Technological Device Usage",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 24),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### CALC (Consumption of alcohol)
+
+Only 1 datapoint has the attribute of always drinking alcohol. 
+Out of all 2111 entries in the dataset, only about 30% of datapoints pertain to persons who don't drink alcohol.
+
+```{r CALC}
+alcohol_df <- obesity %>%
+  group_by(alcohol) %>%
+  summarise(count = n()) %>%
+  distinct(alcohol, .keep_all = TRUE) %>%
+  mutate(alcohol = fct_relevel(alcohol,
+                               "no", "Sometimes", "Frequently", "Always"))
+
+ggplot(alcohol_df, aes(alcohol, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = alcohol)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Frequency of Alcohol Consumption",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### MTRANS (Transportation used)
+
+Roughly 75% of datapoints in the dataset consists of those who use public transportation as their preferred 
+mode of transport, while 22% of datapoints represent those who use an Automobile. 
+
+```{r MTRANS}
+transportation_df <- obesity %>%
+  group_by(transportation) %>%
+  summarise(transportation, count = n()) %>%
+  distinct(transportation, .keep_all = TRUE)
+
+x_labs <- c("Automobile", "Bike", "Motorbike",
+            "Public\n Transportation", "Walking")
+
+ggplot(transportation_df, aes(transportation, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = transportation)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  scale_x_discrete(labels = x_labs) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Mode of Transport Used",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### obesity_level
+
+It is interesting to note that while there seems to be a fairly uniform distribution for 
+the various weight categories, when filtering out datapoints that were generated by the 
+descision tree algorithm, most people surveyed had a normal weight or were only slightly 
+overweight/underweight. This will be interesting in subsequent analytical discussions.
+
+```{r obesity_level}
+obesity_level_df <- obesity %>%
+  group_by(obesity_level) %>%
+  summarise(obesity_level, count = n()) %>%
+  distinct(obesity_level, .keep_all = TRUE)
+
+obesity_level_true_df <- unfiltered_obesity %>%
+  filter(activity %% 1 == 0) %>%
+  group_by(obesity_level) %>%
+  summarise(obesity_level, count = n()) %>%
+  distinct(obesity_level, .keep_all = TRUE)
+
+x_labs <- c("Insufficient\nWeight", "Normal\nWeight", "Overweight\nI",
+            "Overweight\nII", "Obesity\nType I",
+            "Obesity\nType II", "Obesity\nType III")
+
+ggplot(obesity_level_df, aes(obesity_level, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = obesity_level)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 3) +
+  scale_x_discrete(labels = x_labs) +
+  labs(x = "Category",
+       y = "Frequency",
+       title = "Distribution of Obesity Status in Obesity dataset",
+       subtitle = "Including algorithm-generated datapoints.",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8)
+  )
+
+ggplot(obesity_level_true_df, aes(obesity_level, count)) +
+  geom_bar(
+           stat = "identity",
+           position = "identity",
+           aes(fill = obesity_level)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 3) +
+  scale_x_discrete(labels = x_labs) +
+  labs(x = "Category",
+       y = "Frequency",
+       title = "Distribution of Obesity Status in Obesity dataset",
+       subtitle = "Excluding algorithm-generated datapoints.",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8)
+  )
+```
+
+### BMI
+
+```{r BMI}
+ggplot(obesity, aes(bmi)) +
+  geom_histogram(
+                 aes(y = ..density..),
+                 bins = 45,
+                 color = "black",
+                 fill = "white",
+                 alpha = 0.4) +
+  geom_density(size = 2, color = "steelblue4", fill = "tan1", alpha = 0.4) +
+  scale_y_continuous(labels = scales::label_number(scale = 2111)) +
+  labs(x = "BMI",
+       y = "Frequency",
+       title = "Distribution of BMI in Obesity Dataset",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+## (c) Explore the relationship between the target variable (you may pick BMI or obesity_level or both based on your judgement) and every other variable.
+
+
+
+I chose to explore BMI and every other variable due to BMI being a continuous random variable, which facilitates visualization 
+as most relationships can be displayed using a ridged density plot or as a dotplot with a trendline. 
+Using Obesity level undoubtedly has its benefits, as weight categories are emperically quantified and easier to 
+identify compared with the continuous nature of BMI. However, BMI was selected precisely due to its flexibility and continuity. 
+
+
+
+As expected, `obesity_level` and `bmi` are both linearly related to each other.
+
+```{r obesity_level_bmi}
+obesity_bmi <- obesity %>%
+  select(obesity_level, bmi)
+
+ggplot(obesity_bmi, aes(bmi, obesity_level)) +
+  geom_density_ridges(aes(fill = obesity_level), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Obesity Level",
+       title = "Obesity Level and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+Subsequent visualizations will explore the relationship between BMI and the respective variable.
+
+### Gender and BMI
+
+```{r gender_bmi}
+gender_bmi <- obesity %>%
+  select(gender, bmi)
+
+ggplot(gender_bmi, aes(bmi, gender)) +
+  geom_density_ridges(aes(fill = gender), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Gender",
+       title = "Gender and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### Age and BMI
+
+```{r age_bmi}
+age_bmi <- obesity %>%
+  select(age, bmi, obesity_level)
+
+ggplot(age_bmi, aes(age, bmi)) +
+  geom_point(aes(color = obesity_level)) +
+  geom_smooth() +
+  labs(x = "Age (Years)",
+       y = "BMI",
+       title = "Age and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### Height and BMI
+
+
+```{r height_bmi}
+height_bmi <- obesity %>%
+  select(height, bmi, obesity_level)
+
+ggplot(height_bmi, aes(height, bmi)) +
+  geom_point(aes(color = obesity_level)) +
+  geom_smooth() +
+  labs(x = "Height (Meters)",
+       y = "BMI",
+       title = "Height and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### Weight and BMI
+
+```{r weight_bmi}
+weight_bmi <- obesity %>%
+  select(weight, bmi, obesity_level)
+
+ggplot(weight_bmi, aes(weight, bmi)) +
+  geom_point(aes(color = obesity_level)) +
+  geom_smooth() +
+  labs(x = "Weight (Kilograms)",
+       y = "BMI",
+       title = "Height and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### family_history_with_overweight and BMI
+
+```{r fam_hist_bmi}
+fam_hist_bmi <- obesity %>%
+  select(fam_hist, bmi)
+
+ggplot(fam_hist_bmi, aes(bmi, fam_hist)) +
+  geom_density_ridges(aes(fill = fam_hist), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Family history of being overweight",
+       title = "Family History of Obesity and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### FAVC (Frequent consumption of high caloric foods) and BMI
+
+```{r high_cal_bmi}
+high_cal_bmi <- obesity %>%
+  select(bmi, high_cal)
+
+ggplot(high_cal_bmi, aes(bmi, high_cal)) +
+  geom_density_ridges(aes(fill = high_cal), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Frequently Eats High-Calorie Food",
+       title = "High-Calorie Food Consumption and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### FCVC (Frequency of consumption of vegetables) and BMI
+
+```{r freq_vegetable_bmi}
+freq_vegetable_bmi <- obesity %>%
+  select(bmi, freq_vegetable) %>%
+  mutate(freq_vegetable = fct_relevel(freq_vegetable,
+                                      "Never", "Sometimes", "Always"))
+
+ggplot(freq_vegetable_bmi, aes(bmi, freq_vegetable)) +
+  geom_density_ridges(aes(fill = freq_vegetable), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Frequently Eats Vegetables",
+       title = "Vegetable Consumption and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### NCP (Number of main meals) and BMI
+
+```{r meal_count_bmi}
+meal_count_bmi <- obesity %>%
+  select(bmi, meal_count) %>%
+  mutate(meal_count = fct_relevel(meal_count,
+                                  "1-2 meals", "3 meals", "More than 3 meals"))
+
+ggplot(meal_count_bmi, aes(bmi, meal_count)) +
+  geom_density_ridges(aes(fill = meal_count), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Number of Meals per Day",
+       title = "Number of Meals/Day and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### CAEC (Consumption of food between meals) and BMI
+
+```{r snack_bmi}
+snack_bmi <- obesity %>%
+  select(bmi, snack)
+
+ggplot(snack_bmi, aes(bmi, snack)) +
+  geom_density_ridges(aes(fill = snack), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Frequency of Snacks Eaten",
+       title = "Frequency of Snacks/Day and BMI",
+       fill = "Legend") +
+  scale_y_discrete(labels = c("Always", "Frequently", "Never", "Sometimes")) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### FAF (Physical activity frequency) and BMI
+
+```{r activity_bmi}
+activity_bmi <- obesity %>%
+  select(bmi, activity) %>%
+  mutate(snack = fct_reorder(snack,
+                             "Never", "1-2 days", "2-4 days", "4-5 days"))
+
+ggplot(activity_bmi, aes(bmi, activity)) +
+  geom_density_ridges(aes(fill = activity), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Frequency of Activity",
+       title = "Frequency of Physical Activity/Week and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### SMOKE and BMI
+
+```{r smoke_bmi}
+smoke_bmi <- obesity %>%
+  select(bmi, smoke)
+
+ggplot(smoke_bmi, aes(bmi, smoke)) +
+  geom_density_ridges(aes(fill = smoke), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Smoker Status",
+       title = "Smoking and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### CH2O (Consumption of water daily) and BMI
+
+```{r water_bmi}
+water_bmi <- obesity %>%
+  select(bmi, water)
+
+ggplot(water_bmi, aes(bmi, water)) +
+  geom_density_ridges(aes(fill = water), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Amount of Water/Day",
+       title = "Water Consumption and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### SCC (Calories consumption monitoring) and BMI
+
+```{r monitor_calorie_bmi}
+monitor_calorie_bmi <- obesity %>%
+  select(bmi, monitor_calorie)
+
+ggplot(monitor_calorie_bmi, aes(bmi, monitor_calorie)) +
+  geom_density_ridges(aes(fill = monitor_calorie), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Calorie Monitoring Performed",
+       title = "Calorie Monitoring and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### TUE (Time using technology devices) and BMI
+
+```{r screen_time_bmi}
+screen_time_bmi <- obesity %>%
+  select(bmi, screen_time)
+
+ggplot(screen_time_bmi, aes(bmi, screen_time)) +
+  geom_density_ridges(aes(fill = screen_time), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Screen Time/Day",
+       title = "Daily Screen Time and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+### CALC (Consumption of alcohol) and BMI
+
+```{r alcohol_bmi}
+alcohol_bmi <- obesity %>%
+  select(bmi, alcohol)
+
+ggplot(alcohol_bmi, aes(bmi, alcohol)) +
+  geom_density_ridges(aes(fill = alcohol), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Alcohol Consumed",
+       title = "Alcohol Consumption and BMI",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+
+filter(alcohol_bmi, alcohol == "Always")
+```
+
+### MTRANS (Transportation used) and BMI
+
+```{r transportation_bmi}
+transportation_bmi <- obesity %>%
+  select(bmi, transportation)
+
+ggplot(transportation_bmi, aes(bmi, transportation)) +
+  geom_density_ridges(aes(fill = transportation), alpha = 0.5) +
+  labs(x = "BMI",
+       y = "Mode of Transportation",
+       title = "Transportation Method and BMI",
+       fill = "Legend") +
+  scale_y_discrete(labels = c("Automobile", "Bike", "Motorbike",
+                              "Public\nTransportation", "Walking")) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+# 2. Customized tasks
+
+
+## (a) Use graphs or tables to explore any question that you are interested to answer from the data set. You are required to explore at least 3 different questions or answer one question in depth with at least 3 pages of analysis (including graphs) in length.
+
+
+### 1. There exists an urban legend that smoking makes you slim. Is this true?
+
+The claim that smoking is bad for your health has been verified countless times as a scientific fact. However, a small fraction 
+of smokers justify their habits by claiming that the act of smoking entails the side effect of being beneficial for weight control 
+or even reduction. According to a 2008 study, nicotine consumption, when speaking from a short term perspective, 
+
+> increases energy expenditure and could reduce appetite, which may explain why smokers tend to have lower body weight 
+
+*(Arnaud Chiolero et al., 2008)*
+
+However, the same study also states that:
+
+> In the context of the worldwide obesity epidemic and a high prevalence of smoking, the greater risk of (central) obesity and insulin resistance among smokers is a matter of major concern.
+
+*(Arnaud Chiolero et al., 2008)*
+
+Therefore, when speaking from a long-term perspective, smoking will actually increase the chance of becoming obese 
+and increase the chance of diabetes. 
+
+
+
+Staunch smoking advocates also need to understand that those who avidly consume nicotine and also maintain an extremely slim 
+physique is not due to their excessive smoking, but due to their dietary habits and a plethora of other factors. When analyzing the 
+obesity dataset, a filtering function was applied to extract all datasets which represented smoking individuals. The data was 
+further divided into the categories of `fam_hist` and `high_cal`, which represented the boolean attributes of whether the individual 
+had a hereditary factor at play and/or was often consuming food with a high caloric content. 
+
+
+
+In the figure below, one can see that there were a significant number of people who were overweight as well as obese despite the fact that 
+they were smokers. It seemed that, when comparing the two figures below, that having a family history of being overweight 
+and having a high-calorie diet are both factors which contributed greatly to being obese when compared with being a smoker or not. 
+
+
+
+As smokers only take up 2.1% of the dataset, it is important to note the limitations of this analysis while simultaneously warranting 
+the conduction of subsequent studies. Yet some conclusions can nevertheless be drawn, as when analyzing non-smokers, the distribution 
+of their weight levels are, in many regards, quite similar when compared to the average smoker, 
+when considering factors such as `fam_hist` and `high_cal`.
+
+
+
+It is important to note that smoking has shown no statistical evidence of smoking being the panacea for weight loss. 
+Rather, current research indicates that smoking is counterproductive in regards to weight loss, including indications of 
+
+> smoking increas[ing] insulin resistance and [being] associated with central fat accumulation...
+
+among other unhealthy attributed associated with smoking. 
+
+```{r smoking_and_slimming, fig.width=10}
+smokers <- obesity %>%
+  filter(smoke == "yes") %>%
+  mutate(HIGH_CAL = ifelse(
+                           high_cal == "yes",
+                           "High-Calorie Diet",
+                           "Non-High-Calorie Diet")) %>%
+  mutate(FAM_HIST = ifelse(
+                           fam_hist == "yes",
+                           "Overweight Family History",
+                           "No Family History of Being Overweight"))
+
+
+ggplot(smokers, aes(age, obesity_level)) +
+  geom_density_ridges(aes(fill = obesity_level), alpha = 0.5) +
+  scale_x_continuous(breaks = seq(0, 100, by = 10),
+                     limits = c(10, 60)) +
+  facet_grid(HIGH_CAL ~ FAM_HIST) +
+  labs(x = "Age Range",
+       y = "Weight Classification",
+       title = "Distribution of Weight Category against Age",
+       subtitle = "For Smokers",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_linedraw()
+
+non_smokers <- obesity %>%
+  filter(smoke == "no") %>%
+  mutate(HIGH_CAL = ifelse(
+                           high_cal == "yes",
+                           "High-Calorie Diet",
+                           "Non-High-Calorie Diet")) %>%
+  mutate(FAM_HIST = ifelse(
+                           fam_hist == "yes",
+                           "Overweight Family History",
+                           "No Family History of Being Overweight"))
+
+
+ggplot(non_smokers, aes(age, obesity_level)) +
+  geom_density_ridges(aes(fill = obesity_level), alpha = 0.5) +
+  scale_x_continuous(breaks = seq(0, 100, by = 10),
+                     limits = c(10, 60)) +
+  facet_grid(HIGH_CAL ~ FAM_HIST) +
+  labs(x = "Age Range",
+       y = "Weight Classification",
+       title = "Distribution of Weight Category against Age",
+       subtitle = "For Non-Smokers",
+       fill = "Legend") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_linedraw()
+```
+
+
+
+
+### 2. In this dataset completed by Descision Trees (a form of machine learning), a significant portion of those who have insufficient weight are generated by a model. What are the characterisics of this category? How do they differ from those who are overweight?
+
+
+Out of the 2,111 entries in this obesity dataset, only roughly 23% of the dataset stemmed from real individuals. 
+The Remainder of the dataset was completed using machine learning methods including descision trees, bayesian networks, 
+as well as logistic regression. Given that 
+
+>  the Decision Trees technique has the best precision rate (97.4%)
+
+*(De la Hoz Manotas et al., 2019)*
+
+it is logical to assume that analyzing what the computer thinks about the individuals who are overweight (or not) 
+will tell us more about the generalizations made by said algorithm such that artificial datasets can be created. 
+Variables such as weight, age, as well as their diet, family history, and whether they monitiored their caloric intake 
+were all factors taken into consideration.
+
+First, new dataframes were created as subsets of the main obesity dataset which suited the needs of this question. 
+Descision-tree generated data was filtered out with the help of certain characteristics unique to artificial data. 
+In the generated dataset, the variable `FAF` or `activity` was composed of a list of whole integers ranging 
+from 0 to 3. However, computer generated datapoints would take a value in all natural numbers in the range of 0 to 3 
+rather than being limited to only 4 possible values. 
+
+
+```{r descision_tree_data}
+descision_tree_under <- unfiltered_obesity %>%
+  filter(obesity_level == "Insufficient_Weight") %>%
+  filter(activity %% 1 != 0) %>%
+  mutate(MONITOR = ifelse(
+                          monitor_calorie == "yes",
+                          "Monitoring Calorie Intake",
+                          "Not Monitoring Calorie Intake")) %>%
+  mutate(FAM_HIST = ifelse(
+                           fam_hist == "yes",
+                           "Overweight Family History",
+                           "No Family History of Being Overweight"))
+
+descision_tree_obese <- unfiltered_obesity %>%
+  filter(obesity_level == "Obesity_Type_I" |
+           obesity_level == "Obesity_Type_II" |
+           obesity_level == "Obesity_Type_III") %>%
+  filter(activity %% 1 != 0) %>%
+  mutate(MONITOR = ifelse(
+                          monitor_calorie == "yes",
+                          "Monitoring Calorie Intake",
+                          "Not Monitoring Calorie Intake")) %>%
+  mutate(FAM_HIST = ifelse(
+                           fam_hist == "yes",
+                           "Overweight Family History",
+                           "No Family History of Being Overweight"))
+
+
+descision_tree_over <- unfiltered_obesity %>%
+  filter(obesity_level == "Overweight_Level_I" |
+           obesity_level == "Overweight_Level_II") %>%
+  filter(activity %% 1 != 0) %>%
+  mutate(MONITOR = ifelse(
+                          monitor_calorie == "yes",
+                          "Monitoring Calorie Intake",
+                          "Not Monitoring Calorie Intake")) %>%
+  mutate(FAM_HIST = ifelse(
+                           fam_hist == "yes",
+                           "Overweight Family History",
+                           "No Family History of Being Overweight"))
+```
+
+
+
+During analysis, when looking at the Distribution of Underweight Individuals, attributes of consuming high-caloric food, 
+having a family history of being overweight, and having an emperically large weight might be factors which impact 
+their obesity level. 
+
+
+
+It is interesting to note that the algorithm predicted that underweight individuals actually did 
+not pay too much attention to their caloric intake. At the same time, underweight individuals who with a high caloric 
+intake emperically weighted more, which might be an indication that high caloric 
+intake does not neccecarily cause excessive weight gain. 
+
+
+
+When looking at the Distribution of Obese Individuals, one notices that Obese individuals exclusively have a family history of being overweight 
+and do not monitor their caloric intake. At the same time, it is possible for people of all ages to be obese and that 
+almost all obese individuals consume high-calorie food. 
+
+
+A similar trend can be seen in the Distribution of Overweight Individuals, 
+most of the datapoints represent individuals who would have a family history of being overweight as well as not 
+monitoring their caloric intake. Interestingly, in this specific category (bottom left square) There seem to be a 
+considerable number of individuals who do not consume high-calorie food. One possible explaination for this would be 
+that their above-average weight is attributed to genetical issues rather than other, more controllable factors. 
+
+
+
+```{r descision_tree_graphs, fig.width=10}
+ggplot(descision_tree_under, aes(weight, age)) +
+  geom_point(aes(color = high_cal)) +
+  geom_smooth() +
+  facet_grid(MONITOR ~ FAM_HIST) +
+  labs(x = "Weight Range (Kilograms)",
+       y = "Age (Years)",
+       title = "Distribution of Weight in Underweight Individuals",
+       subtitle = "Datapoints generated through a descision tree ONLY
+  Seperated by attributes calorie monitoring and family history of being overweight",
+       color = "Consumes High-Calorie Food") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 24),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+
+
+
+ggplot(descision_tree_over, aes(weight, age)) +
+  geom_point(aes(color = high_cal)) +
+  geom_smooth() +
+  facet_grid(MONITOR ~ FAM_HIST) +
+  labs(x = "Weight Range (Kilograms)",
+       y = "Age (Years)",
+       title = "Distribution of Weight in Overweight Individuals",
+       subtitle = "Datapoints generated through a descision tree ONLY
+  Seperated by attributes calorie monitoring and family history of being overweight",
+       color = "Consumes High-Calorie Food") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 24),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+
+
+
+ggplot(descision_tree_obese, aes(weight, age)) +
+  geom_point(aes(color = high_cal)) +
+  geom_smooth() +
+  facet_grid(MONITOR ~ FAM_HIST) +
+  labs(x = "Weight Range (Kilograms)",
+       y = "Age (Years)",
+       title = "Distribution of Weight in Obese Individuals",
+       subtitle = "Datapoints generated through a descision tree ONLY
+  Seperated by attributes calorie monitoring and family history of being overweight",
+       color = "Consumes High-Calorie Food") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 24),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+```
+
+
+## (b) Build a model with BMI as your target variable. Properly choose independent variables and state why. You must include an error analysis in your report.
+
+
+
+During preliminary analysis, a few varaibles such as Gender and Frequency of Alcohol Consumption were deemed to have 
+little to no correlation with bmi. This determination was made in the variable analysis section 
+where it was evident that a certain attribute had little effect on the corresponding bmi. 
+
+
+
+In order to construct the model, a number of variables were selected and evaluated for their significance 
+in constructing the model. For the sake of simplicity, 4 variables, of which age is the only continous and the rest 
+being categorical, were selected to predict a linear model for the bmi of a datapoint in question. 
+These being 
+
+* Age (Continous Discrete)
+* Family History of Obesity (Categorical)
+* High-Calorie Diet (Categorical)
+* Transporation Method (Categorical)
+
+*note that the transportation method variable was divided and reduced into a new variable* `intense` 
+*which only considered Biking and Walking as an "intense" transporation method.*
+
+
+
+The variables weight and height were not selected mainly due to them being the only 2 variables used to 
+calculate bmi itself. Interestingly, while weight alone correlated with an individual's bmi, height did not. 
+After some minor data transformations and fitting, a linear model with a p-value of less than 2.2e-16 
+was generated. 
+
+```{r linear modelling}
+obesity_modelling <- obesity %>%
+  mutate(
+         intense = case_when(
+           transportation == "Automobile" ~ "no",
+           transportation == "Bike" ~ "yes",
+           transportation == "Motorbike" ~ "no",
+           transportation == "Public_Transportation" ~ "no",
+           transportation == "Walking" ~ "yes"
+         ))
+
+attach(obesity_modelling)
+
+model <- lm(bmi ~ age + fam_hist +
+              high_cal + intense)
+
+summary(model)
+```
+
+
+After analyzing the dataframe, a look at the Scale vs Location plots and the Residuals 
+vs Fitted showed that the model was linear to a good degree. 
+
+
+```{r scale_location/residuals_fitted}
+plot(model, which = 1)
+plot(model, which = 3)
+```
+
+This is further confirmed by the Normal Q-Q plot which follows a reasonable distribution and only 
+begins to produce outliers beyond 3 standard deviations from the median. 
+
+
+```{r}
+plot(model, which = 2)
+```
+
+
+
+# References:
+
+1. Arnaud Chiolero, David Faeh, Fred Paccaud, Jacques Cornuz,
+Consequences of smoking for body weight, body fat distribution, and insulin resistance1,
+The American Journal of Clinical Nutrition,
+Volume 87, Issue 4,
+2008,
+Pages 801-809,
+ISSN 0002-9165,
+https://doi.org/10.1093/ajcn/87.4.801
+
+(https://www.sciencedirect.com/science/article/pii/S0002916523235479)
+
+
+2. De la Hoz Manotas, Alexis & De la Hoz Correa, Eduardo & Mendoza, Fabio & Morales, Roberto & Sanchez, Beatriz. (2019). 
+Obesity Level Estimation Software based on Decision Trees. 
+Journal of Computer Science. 15. 10. 10.3844/jcssp.2019.67.77. 
+https://www.researchgate.net/publication/330262276_Obesity_Level_Estimation_Software_based_on_Decision_Trees

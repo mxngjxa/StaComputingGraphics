@@ -1,0 +1,406 @@
+---
+title: "STA 305 HW 4"
+author: "Jacky Guan"
+date: "2023-11-09"
+output: pdf_document
+---
+
+Loading required libraries
+
+```{r setwd, message=FALSE, eval = FALSE}
+setwd("Documents/SEM\ 3/STA\ 305/Homework/HW4")
+```
+```{r setup, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(ggridges)
+library(nycflights13)
+tuition <- read.csv("./us_avg_tuition.csv")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+## 1. `WHO` data set in the `tidyr` package
+
+
+
+
+
+#### 1. Read the lecture notebook that tidies the `who` data set, understand all steps needed, then reproduce the whole tidying steps by yourself without referring to my notebook.
+
+```{r who_tidying}
+who_tidy <- who %>%
+  pivot_longer(
+    cols = "new_sp_m014":"newrel_f65",
+    names_to = "class",
+    values_to = "cases",
+    values_drop_na = TRUE
+  ) %>%
+  mutate(class = str_replace(class, "newrel", "new_rel")) %>%
+  separate(class, c("new", "type", "s_a"), sep = "_") %>%
+  select(-new, -iso2, -iso3) %>%
+  separate(s_a, into = c("sex", "age"), sep = 1)
+
+glimpse(who_tidy)
+```
+
+
+
+#### 2. Using the tidied data, explore one question of your interest and answer it with visualization or summary table.
+
+Which 5 Countries had the most TB cases in 2010? How did cases differ by age?
+
+```{r male_cases_2010}
+most_cases <- who_tidy %>%
+  filter(year == 2010) %>%
+  group_by(country) %>%
+  summarize(case_number = sum(cases)) %>%
+  arrange(desc(case_number)) %>%
+  head(5)
+
+filtered_countries <- who_tidy %>%
+  filter(country %in% most_cases$country) %>%
+  filter(year == 2010) %>%
+  mutate(age = case_when(
+    age == 014 ~ "Age 0-14",
+    age == 1524 ~ "Age 15-24",
+    age == 2534 ~ "Age 25-34",
+    age == 3544 ~ "Age 35-44",
+    age == 4554 ~ "Age 45-54",
+    age == 5564 ~ "Age 55-64",
+    age == 65 ~ "Age 65+"
+  ))
+
+ggplot(filtered_countries) +
+  stat_summary(
+    mapping = aes(country, cases, fill = age),
+    geom = "bar",
+    position = "dodge"
+  ) +
+  labs(x = "Country",
+       y = "Case Count",
+       title = "Top 5 Countries in 2010 with most TB cases",
+       fill = "Age") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  theme_minimal()
+```
+
+
+
+## 2. Tidy and visualize the `US_average_tuition` data set (attached on Canvas) This data set is the average 4-year college tuition for each states in the US over year.
+
+
+
+
+
+#### 1. Tidy the data following what we learned in class.
+
+
+```{r tidy_tuition}
+tuition <- tuition %>%
+  pivot_longer(
+    cols = "X2004.05":"X2015.16",
+    names_to = "year",
+    values_to = "cost",
+    values_drop_na = TRUE
+  ) %>%
+  mutate(year = case_when(
+    year == "X2004.05" ~ "2004-2005",
+    year == "X2005.06" ~ "2005-2006",
+    year == "X2006.07" ~ "2006-2007",
+    year == "X2007.08" ~ "2007-2008",
+    year == "X2008.09" ~ "2008-2009",
+    year == "X2009.10" ~ "2009-2010",
+    year == "X2010.11" ~ "2010-2011",
+    year == "X2011.12" ~ "2011-2012",
+    year == "X2012.13" ~ "2012-2013",
+    year == "X2013.14" ~ "2013-2014",
+    year == "X2014.15" ~ "2014-2015",
+    year == "X2015.16" ~ "2015-2016"
+  )) %>%
+  mutate(across(everything(), ~gsub("[$,]", "", .)))
+
+annual_tuition <- tuition %>%
+  group_by(State) %>%
+  summarize(average_cost = mean(as.integer(cost))) %>%
+  arrange(desc(average_cost))
+
+glimpse(tuition)
+
+```
+
+
+
+#### 2. Make an informative visualization of the data to show the average tuition across all years in the data set for each state. Which state has the highest tuition? Which state has the lowest?
+
+
+```{r high_low}
+ht <- annual_tuition %>%
+  head(10)
+
+lab_max <- c("DE", "IL", "MA", "MI", "NH", "NJ", "OH", "PA", "SC", "VT")
+
+ggplot(ht, aes(State, as.integer(average_cost))) +
+  geom_bar(aes(fill = State), stat = "identity") +
+  geom_text(aes(label = floor(as.integer(average_cost))),
+            vjust = -0.5,
+            color = "black",
+            size = 4) +
+  scale_x_discrete(labels = lab_max) +
+  labs(title = "States With Highest Annual Tuition",
+       x = "State",
+       y = "Average Annual Cost") +
+  theme_minimal()
+
+lt <- annual_tuition %>%
+  tail(10)
+
+lab_min <- c("WV", "ID", "NC", "NM", "AK", "LA", "NV", "UT", "FL", "WY")
+
+ggplot(lt, aes(State, y = as.integer(average_cost))) +
+  geom_bar(aes(fill = State), stat = "identity") +
+  geom_text(aes(label = floor(as.integer(average_cost))),
+            vjust = -0.5,
+            color = "black",
+            size = 4) +
+  scale_x_discrete(labels = lab_min) +
+  labs(title = "States With Lowest Annual Tuition",
+       x = "State",
+       y = "Average Annual Cost") +
+  theme_minimal()
+```
+
+
+
+#### 3. Make an informative visualization of the data to show the increasing rate of average tuition from 2004- 2005 to 2015-2016 in each state. Which state’s tuition increased at the fastest rate? Which one the slowest?
+
+
+It seems that using a scatterplot is not the best way to view the change in tuition 
+due to the datapoints clustering up. However, a simple table does the trick. 
+
+
+
+```{r rate_of_tuition_change, fig.height=10}
+school_years <- c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16")
+
+ggplot(tuition) +
+  geom_point(aes(year, as.integer(cost), color = State, group = State)) +
+  scale_x_discrete(labels = school_years) +
+  scale_y_continuous(limits = c(3000, 15000)) +
+  labs(title = "Tuition Over Time",
+       x = "Year",
+       y = "Cost") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+tuition_change <- tuition %>%
+  filter(year %in% c("2004-2005", "2015-2016")) %>%
+  pivot_wider(names_from = year, values_from = cost) %>%
+  mutate(change_in_tuition =
+           as.integer(`2015-2016`) - as.integer(`2004-2005`)) %>%
+  arrange(desc(change_in_tuition))
+
+head(tuition_change, 1)
+tail(tuition_change, 1)
+```
+
+
+
+## 3. Analyze `flights` and `weather` data sets in `nycflights13` (relational data) Study the class examples in relational data, explore the flights and weather data set to fulfill the given task or answer the given questions:
+
+
+
+
+
+
+#### 1. Finish the lab exercise - Create a airport map with each airport location marked on the map and colored by the number of flights per day from NYC to each airport.
+
+
+```{r flights_frequency}
+flights_average <- flights %>%
+  left_join(airports, c("dest" = "faa")) %>%
+  select(dest, lat, lon) %>%
+  group_by(dest) %>%
+  mutate(frequency = n() / 365) %>%
+  distinct(dest, .keep_all = TRUE) %>%
+  filter(!is.na(lat)) %>%
+  arrange(desc(frequency))
+
+ggplot(flights_average) +
+  geom_point(aes(lon, lat, color = frequency)) +
+  borders("state") +
+  xlim(-125, -65) +
+  ylim(24, 50) +
+  scale_color_gradient(low = "cyan", high = "purple4") +
+  coord_quickmap() +
+  labs(x = "Longitude",
+       y = "Latitude",
+       title = "Frequency of Flights per Day to Airports in the US from NYC",
+       color = "Frequency") +
+  theme_minimal()
+```
+
+
+
+#### 2. What weather conditions make it more likely to see a departure delay? hot or cold weather? windy weather? rainy or snowy? foggy? Create a proper data frame and use proper visualization or summary table to answer the question.
+
+Certain variables were omitted from the dataframe since they either served little purpose or 
+were essentially duplicated throughout the dataset
+
+```{r weather_flights}
+weather_flights <- flights %>%
+  left_join(weather, by = c("time_hour" = "time_hour", "origin" = "origin")) %>%
+  select(time_hour, carrier, flight, origin, dep_delay, temp:visib)
+```
+
+
+
+
+
+```{r temp}
+ggplot(weather_flights, aes(temp, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Temperature (F)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Temperature") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+
+Temperature does not seem to affect departure delay.
+
+
+```{r humid}
+ggplot(weather_flights, aes(humid, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Humidity (%)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Humidity") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+Increasing humidity might correlate with a greater departure delay.
+
+
+```{r wind_speed}
+ggplot(weather_flights, aes(wind_speed, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Wind Speed (Miles/Hour)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Wind Speed") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+
+Wind speed does not seem to affect departure delay.
+
+```{r wind_gust}
+ggplot(weather_flights, aes(wind_gust, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Wind Gust (Miles/Hour)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Wind Gust") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+
+Faster wind gusts might correlate with a greater departure delay.
+
+```{r precip}
+ggplot(weather_flights, aes(precip, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Precipitation (Inches)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Precipitation") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+
+
+Increased precipitation potentially correlates with a greater departure delay.
+
+```{r pressure}
+ggplot(weather_flights, aes(pressure, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Pressure (mBar)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Pressure") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+
+
+As low pressure is associated with precipitation, it is therefore likely that 
+low pressure is correlated with departure delays.
+```{r visib}
+ggplot(weather_flights, aes(visib, dep_delay)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Visibility (Miles)",
+       y = "Departure Delay (Minutes)",
+       title = "Departure Delay vs Visibility") +
+  ylim(0, 500) +
+  theme_minimal()
+```
+
+Low visibility is likely correltaed with longer departure delays, while good visibility is 
+conversely correlated with shorter delays. 
+
+#### 3. Display the spatial pattern of arrival delays on June 13, 2013 using a map, and then use Google to cross-reference with the weather. Explain how the weather condition might have affected the spatial pattern of arrival delays.
+
+
+
+It seems that there were significant delays across the continental United States with the 
+exception of Oklahoma and some parts of New England. 
+
+
+After preliminary reserach, it can be said that there was a severe storm front, also 
+known as a dechero, which swept across the eastern continental United States. 
+This was likely the cause of departure delays across the board of flights which departed 
+from NYC.
+
+
+On the days of June 12-13, 2013, The National Weather Service reported that
+
+> Multiple Rounds of Severe Weather
+
+were traversing across the Great Lakes and Ohio Valley into the North. 
+
+```{r june_13_delay}
+delay_data <- flights %>%
+  filter(day == 13, month == 6) %>%
+  filter(!is.na(arr_delay)) %>%
+  group_by(dest) %>%
+  summarize(avg_delay = mean(arr_delay))
+
+june_13_delay <- airports %>%
+  left_join(delay_data, by = c("faa" = "dest")) %>%
+  select(lat, lon, avg_delay) %>%
+  filter(!is.na(avg_delay))
+
+ggplot(june_13_delay) +
+  geom_point(aes(lon, lat, color = avg_delay)) +
+  borders("state") +
+  xlim(-125, -65) +
+  ylim(24, 50) +
+  scale_color_gradient(low = "lightskyblue1", high = "violetred4") +
+  coord_quickmap() +
+  labs(x = "Longitude",
+       y = "Latitude",
+       title = "Average Arrival Delay of Flights From NYC",
+       color = "Arrival Delay") +
+  theme_minimal()
+```
+
+

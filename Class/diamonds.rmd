@@ -1,0 +1,109 @@
+---
+title: "Diamonds - Class Notes"
+author: "Jacky Guan"
+date: "2023-09-19"
+output: html_document
+---
+
+#### Lab Exercise for `diamonds` data set
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+### How many samples are there? How many variables are there?
+
+Samples and Variables?
+
+```{r samples/variables}
+ncol(diamonds)
+nrow(diamonds)
+```
+
+### Understand the meaning and the data type for each variable.
+
+The number of colums in diamonds is how many attributes diamonds have. The number of rows is how many diamonds exist in the data set.
+
+### Create a plot to study the relationship between `price` and `carat`. How do you understand this plot?
+
+```{r Carat}
+ggplot(diamonds) +
+    geom_point(aes(x = carat, y = price))
+```
+
+It seems that the price of diamonds grows exponentially with an increase in carats. 
+The plot shows trend lines along carat%(0.5), indicating that most people wish to purchase diamonds with memorable carat numbers
+
+### Create plots to study the relationship between `price` and `cut`, `color`, `clarity`, respectively. How do you understand these plots?
+
+It seems that these plots individually will not provide the whole picture.
+
+#### `cut`
+```{r Cut}
+ggplot(diamonds, aes(x = cut, y = price)) +
+    geom_boxplot(aes(fill = cut))
+```
+
+#### `color`
+```{r Color}
+ggplot(diamonds, aes(x = color, y = price)) +
+    geom_boxplot(aes(fill = color))
+```
+
+#### `clarity`
+```{r Clarity}
+ggplot(diamonds, aes(x = clarity, y = price)) +
+    geom_boxplot(aes(fill = clarity))
+```
+
+### After finishing 3 and 4, do you have more questions raised in your mind? Create a plot to answer those questions.
+
+I do have some questions remaining. What is the relationship betweeen three variables at a time?
+
+#### Carat, Cut, and Price
+
+```{r Carat_Cut}
+ggplot(diamonds, aes(x = carat)) +
+    geom_bar(aes(fill = cut))
+```
+
+#### Carat, Color, and Price
+
+```{r Carat_Color}
+ggplot(diamonds, aes(x = carat)) +
+    geom_bar(aes(fill = color))
+```
+
+#### Carat, Clarity and Price
+
+```{r Carat_Clarity}
+ggplot(diamonds, aes(x = carat)) +
+    geom_bar(aes(fill = clarity))
+```
+
+#### Cut, Color and Price
+
+```{r Cut_Color}
+ggplot(diamonds, aes(x = cut, y = price)) +
+    geom_boxplot(aes(fill = color))
+```
+
+#### Cut, Clarity and Price
+
+```{r Cut_Clarity}
+ggplot(diamonds, aes(x = cut, y = price)) +
+    geom_boxplot(aes(fill = clarity))
+```
+#### Color, Clarity and Price
+
+```{r Color_Clarity}
+ggplot(diamonds, aes(x = color, y = price)) +
+    geom_boxplot(aes(fill = clarity))
+```
+
+For this specific data set, the IF clarity in the D color range is a large outlier. 
+
+Let's analyze that specific category. TBC.
+```{r IF/D}
+filter(diamonds, diamonds$clarity == "IF" , diamonds$color == "D")
+```
+

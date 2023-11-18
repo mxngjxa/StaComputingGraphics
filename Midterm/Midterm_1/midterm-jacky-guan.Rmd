@@ -1,0 +1,431 @@
+---
+title: "STA305 MIDTERM EXAM #1"
+author: 'Jacky Guan'
+date: 'Oct 14, 2023'
+output:
+  pdf_document: default
+  html_notebook:
+    fig_height: 4
+    fig_width: 7
+---
+
+
+
+## Academic Honesty Statement (fill your name in the blank)
+
+I, Mingjia (Jacky) Guan, hereby state that I have not communicated with or gained information in any way from my classmates or anyone other than the Professor during this exam, and that all work is my own.
+
+## Load packages
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(nycflights13)
+library(openintro)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+
+<br>
+
+## 1. The `nycflights13` data set
+
+### Question a)
+
+<br>
+
+The number of fligths departing from NYC each month roughly remains the same throughout the year. 
+
+
+<br>
+
+```{r hist_each_month}
+dep_mon <- flights %>%
+  group_by(month) %>%
+  group_by(dep_time) %>%
+  filter(!is.na(dep_time)) %>%
+  summarise(dep_time, month) %>%
+  mutate(dep_time, hour = dep_time %/% 100) %>%
+  mutate(hour = ifelse(hour == 24, 0, hour))
+
+ggplot(dep_mon, aes(x = month)) +
+  geom_histogram(aes(fill = as.factor(hour)), binwidth = 0.5) +
+  scale_x_continuous(breaks = 1:12) +
+  scale_y_continuous(breaks = seq(0, 30000, by = 2000)) +
+  labs(x = "Month of departure", y = "Number of flights",
+  title = "Number of flights from NYC, by Month",
+  fill = "Hour of departure") +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>
+
+### Question b)
+
+<br>
+
+The top 10 destinations from NYC were 
+- Chicago 
+- Atlanta
+- Los Angeles
+- Boston
+- Orlando
+- Charlotte
+- San Francisco
+- Fort Lauderdale
+- Miami
+- Washington D.C.
+
+
+<br>
+
+```{r dest_10}
+dest_10 <- flights %>%
+  filter(!is.na(dest)) %>%
+  group_by(dest) %>%
+  summarize(dest, count = n()) %>%
+  distinct(dest, .keep_all = TRUE) %>%
+  arrange(desc(count)) %>%
+  head(10)
+
+airport_table <- data.frame()
+
+for (dest in dest_10$dest) {
+  airport_full_name <- airports %>%
+    filter(faa == dest) %>%
+    select(faa, name)
+
+  airport_table <- bind_rows(airport_table, airport_full_name)
+}
+
+print(dest_10)
+print(airport_table)
+```
+
+<br>
+
+### Question c)
+
+<br>
+
+According to the graph and table, June has the worst delays. The average delay for June is 49.8 minutes.
+July is a close second with an average delay of 48.8 minutes.
+
+<br>
+
+```{r dep_delays}
+dep_delay <- flights %>%
+  filter(dep_delay > 0) %>%
+  group_by(month) %>%
+  summarize(month, mean_delay = mean(dep_delay)) %>%
+  distinct() %>%
+  arrange(desc(mean_delay))
+
+ggplot(dep_delay, aes(x = month, y = mean_delay)) +
+  geom_bar(stat = "identity", aes(fill = as.factor(month))) +
+  scale_x_continuous(breaks = 1:12) +
+  scale_y_continuous(breaks = seq(0, 50, by = 5)) +
+  labs(x = "Month of departure", y = "Average delay of flights (min)",
+  title = "Average delay time of flights",
+  fill = "Month") +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+
+tibble(dep_delay)
+```
+
+<br>
+
+### Question d)
+
+<br>
+
+The hottest days for the three aiports all occured in July. 
+<br>
+At JFK, the hottest day was on July 16th with a mean temperature of 87.4 degrees.
+<br>
+At EWR, the hottest day was on July 19th with a mean temperature of 91.1 degrees.
+<br>
+At LGA, the hottest day was also on July 19th with a mean temperature of 92.1 degrees.
+
+<br>
+
+```{r mean_temp}
+mean_temp <- weather %>%
+  group_by(month, day, origin) %>%
+  summarize(month, day, origin, mean_temp = mean(temp)) %>%
+  distinct() %>%
+  arrange(desc(mean_temp)) %>% 
+  head(9) %>%
+  filter(day == 19 | day == 16)
+
+tibble(mean_temp)
+```
+
+<br>
+
+### Question e)
+
+<br>
+
+Overnight flights usually fly an average of 201 minutes (3 hours and 21 minutes).
+These flights are longer than non-overnight flights, which have an average of 152 minutes. 
+
+<br>
+
+```{r overnight}
+overnight <- flights %>%
+  filter(dep_time > 2100 & between(arr_time, 300, 700))
+
+non_overnight <- flights %>%
+  filter(dep_time <= 2100 & !between(arr_time, 300, 700))
+
+mean(overnight$air_time, na.rm = TRUE)
+mean(non_overnight$air_time, na.rm = TRUE)
+```
+
+<br>
+
+### Question f)
+
+<br>
+
+The temperature seems to increase as average delay increases. At the same time, visibility does not 
+seem to be a significant factor in terms of average delays. 
+
+<br>
+
+BONUS
+```{r bonus}
+dep_delay_day <- flights %>%
+  filter(dep_delay > 0) %>%
+  group_by(month, day) %>%
+  summarize(month, day, mean_delay = mean(dep_delay)) %>%
+  distinct()
+
+mean_temp_simple <- weather %>%
+  group_by(month, day) %>%
+  summarize(month, day, mean_temp = mean(temp)) %>%
+  distinct()
+
+mean_visibility <- weather %>%
+  group_by(month, day) %>%
+  summarize(month, day, mean_visibility = floor(mean(visib))) %>%
+  distinct()
+
+combined_data <- left_join(dep_delay_day, mean_temp_simple,
+  by = c("month", "day"))
+combined_data <- left_join(combined_data, mean_visibility,
+  by = c("month", "day"))
+
+ggplot(combined_data, aes(mean_delay, mean_temp)) +
+  geom_point(aes(color = as.factor(mean_visibility))) +
+  geom_smooth() +
+  labs(x = "Average Delay (min)", y = "Average Temperature (F)",
+  title = "The effect of temperature on delay times",
+  labs = "Visibility") +
+  scale_y_continuous(breaks = seq(20, 100, by = 5)) +
+  scale_x_continuous(breaks = seq(0, 100, by = 5)) +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>
+
+<br>
+
+## 2. The `babies` data set
+
+### Question a)
+
+<br>
+
+The distribution of gestation based on parity seems to be that of a normal distribution.
+There is no significant difference between gestation based on parity.
+
+<br>
+
+
+```{r parity_gestation}
+parity_gestation <- babies %>%
+  mutate(parity, first_pregnancy_flag =
+           ifelse(parity == 0, "First Pegnancy", "Not First Pregnancy"))
+
+ggplot(parity_gestation, aes(x = first_pregnancy_flag, y = gestation)) +
+  geom_boxplot(aes(fill = first_pregnancy_flag)) +
+  labs(x = "Parity", y = "Gestation Period (days)",
+  title = "Gestation period by Parity",
+  fill = "Parity") +
+  scale_y_continuous(breaks = seq(200, 340, by = 10), limits = c(200, 340)) +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>
+
+### Question b)
+
+<br>
+
+There does not seem to be a significant visual 
+difference between gestation period and whether the mother was a smoker or not.
+
+<br>
+
+```{r smoke}
+smoke <- babies %>%
+  mutate(smoker_flag = case_when(
+    smoke == 0 ~ "Smoker",
+    smoke == 1 ~ "Non-Smoker",
+    is.na(smoke) ~ "Unknown"
+    )
+  )
+
+ggplot(smoke, aes(smoker_flag, gestation)) +
+  geom_boxplot(aes(fill = smoker_flag)) +
+  labs(x = "Smoking Status", y = "Gestation period (days)",
+  title = "The effect of smoking on gestation period",
+  fill = "Smoking Status") +
+  scale_y_continuous(breaks = seq(225, 325, by = 25), limits = c(225, 325)) +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>
+
+### Question c)
+
+<br>
+
+Age does not seem to be a factor when considering gestation period as the line of best fit is flat.
+
+<br>
+
+```{r gestation_age}
+ggplot(babies, aes(age, gestation)) +
+  geom_point(position = "jitter", aes(color = as.factor(gestation))) +
+  geom_smooth() +
+  guides(color = FALSE) +
+  labs(x = "Age", y = "Gestation period (days)",
+  title = "The effect of age on gestation period",
+  fill = "Legend Title") +
+  scale_y_continuous(breaks = seq(225, 350, by = 25), limits = c(225, 350)) +
+  scale_x_continuous(breaks = seq(15, 45, by = 3)) +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>
+
+### Question d)
+
+<br>
+
+While parity does not seem to have a significant effect on birthweight, gestation period does. 
+The longer the gestation period, the heavier the child tends to be. 
+
+<br>
+
+```{r gestation_pregnancy}
+gestation_pregnancy <- babies %>%
+  mutate(parity, first_pregnancy_flag =
+           ifelse(parity == 0, "First Pegnancy", "Not First Pregnancy")) %>%
+  filter(!is.na(gestation)) %>%
+  mutate(gestation, gest_category = case_when(
+    between(gestation, 0, 250)  ~ "<250",
+    between(gestation, 250, 270)  ~ "250-270",
+    between(gestation, 270, 290)  ~ "270-290",
+    between(gestation, 290, 310)  ~ "290-310",
+    between(gestation, 310, 330)  ~ "330-350",
+    between(gestation, 330, 1000)  ~ ">350"
+    )
+  )
+
+ggplot(gestation_pregnancy, aes(gest_category, bwt)) +
+  geom_boxplot(aes(fill = first_pregnancy_flag)) +
+  labs(x = "Gestation period (days)", y = "Birthweight (ounces)",
+  title = "Effect of gestation and parity on Birthweight",
+  fill = "Parity") +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>
+
+### Question e)
+
+<br>
+
+While the BMI of the mother didn't seem to have a significant impact on birthweight, 
+it seems that if the mother smoked, the baby would likely weigh more.
+
+<br>
+
+```{r smoker_bmi}
+smoker_bmi <- babies %>%
+  mutate(smoker_flag = case_when(
+    smoke == 0 ~ "Smoker",
+    smoke == 1 ~ "Non-Smoker",
+    is.na(smoke) ~ "Unknown"
+    )
+  ) %>%
+  mutate(weight, height, bmi = (weight / (height**2)) * 703) %>%
+  mutate(bmi, bmi_category = case_when(
+    between(bmi, 0, 18.5)  ~ "Under 18.5",
+    between(bmi, 18.5, 24.9)  ~ "18.5-24.9",
+    between(bmi, 25, 29.9)  ~ "25-29.9",
+    between(bmi, 30, 39.9)  ~ "30-39.9",
+    bmi >= 40  ~ "40 or over",
+    TRUE ~ "Unknown"
+  ))
+
+ggplot(smoker_bmi, aes(bmi_category, bwt)) +
+  geom_boxplot(aes(fill = smoker_flag)) +
+  labs(x = "BMI", y = "Birthweight (ounces)",
+  title = "Effect of Smoking and Mother's BMI on birthweight",
+  fill = "Smoking Status") +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 20),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10)
+)
+```
+
+<br>

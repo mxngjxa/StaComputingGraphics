@@ -1,0 +1,130 @@
+---
+title: "STA 305 HW 1.5"
+author: "Jacky Guan"
+date: "2023-09-18"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+#### Using R Markdown for the first time!
+
+This is the first time I am using R Markdown to do my homework. 
+It was previously recommended at my old university that I use LaTeX but I found it to be a little too tedious. 
+
+Without further ado: 
+
+### 1. What is the most popular fuel type in this data set?
+
+The most popular fuel type is regular gasoline fuel. The table below shows that regular fuel is the most popular fuel type with 168 cars out of 234 using regular gasoline. 
+The table also allows us to reach the same conclusion with the fuel type regular fuel being the category with the highest count. 
+
+```{r} 
+table(mpg$fl)
+
+ggplot(data = mpg, aes(x = fl, fill = fl)) +
+    geom_bar(alpha = 0.95, color = "black") +
+    labs(
+        title = "Frequency of fuel types in the 'mpg' dataset.",
+        x = "Fuel Type",
+        y = "#Cars with this fuel type",
+        ) +
+    theme(
+        plot.title = element_text(hjust = 0.5, face = "bold")
+        ) +
+    scale_fill_discrete(
+        name = "Fuel Type",
+        labels = c("CNG", "Diesel", "Electric", "Premium", "Regular")
+        ) + 
+    scale_x_discrete(
+        labels = c("CNG", "Diesel", "Electric", "Premium", "Regular")
+    )
+```
+
+### 2. Regarding the fuel type variable, the value "d" represents diesel, "p" represents premium (petrol) and "r" represents regular (petrol). Do you think there is an effect of fuel type on fuel economy?
+
+I believe that diesel is the most fuel efficient out of all fuel categories as the median, 3rd quartile, as well as maximum values of average mpg is the greatest out of all fuel types. 
+Yes, fuel type has an effect on fuel economy. It is worth noting that the median and IQR for all fuel types varies substantially. 
+Interestingly, fuel type e (electric) has the lowest average mpg out of all vehicles. 
+
+In all future examples, I will use average mpg as defined by `AverageMPG`which is simply the average of `hwy`and `cty`in the `mpg`dataset. 
+
+```{r}
+AverageMPG <- (mpg$hwy + mpg$cty) / 2
+ggplot(mpg, aes(x = fl, y = AverageMPG, fill = fl)) +
+    geom_boxplot(alpha = 0.95) +
+    labs(
+        title = "Boxplot of Average MPG by fuel type",
+        x = "Fuel Type",
+        y = "Average MPG",
+        ) +
+    theme(
+        plot.title = element_text(hjust = 0.5, face = "bold")
+        ) +
+    scale_fill_discrete(
+        name = "Fuel Type",
+        labels = c("CNG", "Diesel", "Electric", "Premium", "Regular")
+        ) + 
+    scale_x_discrete(
+        labels = c("CNG", "Diesel", "Electric", "Premium", "Regular")
+    )
+```
+
+### 3. Do you think there is a difference in fuel economy between vehicles made in 1999 and 2008? 
+
+My guess is that there is a subtle difference between fuel economies when comparing 99 and 08 cars. 
+For some cars, such as c (Compressed Natural Gas) and e (Electric), there seems to be no change in fuel economy. 
+However, due to the phasing out of diesel in passenger cars, it seems that car manufacturers have made it very unattractive to acquire a diesel vehicle due to the drastic decrease in fuel economy. 
+
+On the other hand, petrol cars have seen a slight increase in mpg. 
+Cars using regular fuel have seen a slight increase when looking at the 5 number summary (with the exception of the median value). 
+Premium fuel cars have also seen an increase in fuel efficiency as, with the exception of the min and max mpg values, the 1st, 2nd, and 3rd quartile average mpg have all seen a slight increase.
+
+```{r}
+ggplot(mpg, aes(x = fl, y = AverageMPG, fill = as.factor(year))) +
+    geom_boxplot() +
+    labs(
+        title = "MPG in 1998 compared with 2008",
+        x = "Fuel Type",
+        y = "Average MPG",
+        fill = "Year Manufactured"
+        ) +
+    theme(
+        plot.title = element_text(hjust = 0.5, face = "bold")
+        ) +
+    scale_x_discrete(
+        labels = c("CNG", "Diesel", "Electric", "Premium", "Regular")
+    )
+```
+
+### 4. What happens if you make a scatter plot of "class" vs "drv"? Do you think this plot is useful or not?
+
+Even after turning on jitter, it is not the best plotting method of comparing class and drivetrain - simply due to the lack of clarity. 
+
+```{r}
+ggplot(mpg, aes(x = class, y = drv, color = class)) +
+    geom_point(position = position_jitter(width = 0.1, height = 0.1))
+```
+
+A better method would be to use a barplot while changing the colors to which drivetrain each model uses. 
+
+```{r}
+ggplot(mpg, aes(x = class, fill = drv)) +
+    geom_bar(alpha = 0.95, color = "black") +
+    labs(
+        title = "Drivetrain ",
+        x = "Class of Car",
+        y = "Count"
+        ) +
+    theme(
+        plot.title = element_text(hjust = 0.5, face = "bold")
+        ) +
+    scale_fill_discrete(
+        name = "Drivetrain",
+        labels = c("All-Wheel Drive", "Front-Wheel Drive", "Rear-Wheel Drive")
+        ) +
+    scale_x_discrete(
+        labels = c("Two-Seater", "Compact", "Midsize", "Minivan", "Pickup", "Subcompact", "SUV")
+    )
+```

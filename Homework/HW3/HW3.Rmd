@@ -1,0 +1,559 @@
+---
+title: "STA 305 HW 3"
+author: "Jacky Guan"
+date: "2023-10-03"
+output: pdf_document
+---
+
+Loading required libraries
+
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(ggridges)
+library(nycflights13)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+
+## 1. In-class Exercise for flights data set
+
+
+### (a) filter - filter the data set and answer how many flights in the data set satisfy the given criteria.
+
+
+#### • Find all flights that travel a distance of less than 200 miles.
+
+ <br>   
+
+It seems that there are only a little less than 23,000 flights in 2013 that traveled a distance of less than 200 miles. 
+All of these flights didn't stay in the air for longer than 2 hours. 
+
+```{r flights200}
+flights200 <- flights %>%
+  filter(distance <= 200) %>%
+  select(tailnum, dest, air_time) %>%
+  arrange(desc(air_time))
+
+tibble(flights200)
+
+nrow(flights200)
+```
+
+
+#### • Find all flights that depart from JFK and land on ORD or CVG (Chicago or Dallas).
+
+There were 3,323 flights that went from JFK to ORD or CVG, meaning that about 9 flights departed per day that went to either airport. 
+
+```{r JfkChicagoDallas}
+chicago_or_dallas <- flights %>%
+  filter(origin == "JFK", dest == "ORD" | dest == "CVG")
+
+tibble (chicago_or_dallas)
+
+nrow(chicago_or_dallas)
+nrow(chicago_or_dallas) / 365
+```
+
+
+#### • Find all flights that flied a distance between 200 and 500 miles.
+
+There are 62677 flights that flew between 200 and 500 miles in 2013.
+
+```{r flights2_5}
+flights200_500 <- flights %>%
+  filter(between(distance, 200, 500))
+
+tibble(flights200_500)
+
+nrow(flights200_500)
+```
+
+#### • Find all flights that have a missing plane tail number. What is the percentage of flights with a missing plane tail number?
+
+There are 2,512 planes missing a tail number.
+This corresponds to about 0.7% of all flights. 
+This might be due to some form of system outage perhaps caused by electromagnetic interference.
+
+```{r missing_tail}
+missing_tail <- flights %>%
+  filter(is.na(tailnum))
+
+tibble(missing_tail)
+
+nrow(missing_tail)
+
+perc_missing_tail <- nrow(missing_tail) * 100 / nrow(flights)
+print(paste0(perc_missing_tail, "%"))
+```
+
+### (b) select and rename
+
+
+#### • Reorder the columns of flights such that origin, destination, travel distance, and air time are placed in the first four columns. 
+Rename the travel distance column to be “travel_distance” (this question was not originally included in class exercise).
+
+
+```{r select_and_rename}
+select_and_rename <- flights %>%
+  mutate(distance, travel_distance = distance) %>%
+  select(origin, dest, travel_distance, air_time, everything())
+
+tibble(select_and_rename)
+```
+
+### (c) arrange
+
+
+#### • What was the longest travel distance for any flight in our data set? What was the origin and the destination?
+
+The longest flights were from `JFK` to `HNL`. 
+```{r longest_flight}
+longest_flight <- flights %>%
+  arrange(desc(distance))
+
+tibble(longest_flight)
+```
+
+What is the full expression for `HNL`? It is Honolulu International Airport.
+
+```{r hnl}
+filter(airports, faa == "HNL")
+```
+
+#### • What was the shortest air time for any flight (that actually finished the trip) in our data set? What was the origin and the destination?
+
+The shortest flight only lasted for 20 minutes and flew from Newark International airport to `BDL`, which stands for Bradley International Airport. 
+```{r shortest_air_time}
+shortest_flight <- flights %>%
+  filter(!is.na(air_time)) %>%
+  arrange(air_time)
+
+tibble(shortest_flight)
+
+filter(airports, faa == "BDL")
+```
+
+### (d) mutate
+
+#### • Find the flight with the highest average speed. What is its destination?
+
+It looks like a flight going from LaGuardia International airport flying all the way to Hartsfield Jackson Atlanta International Airport was in quite the hurry. 
+The plane had an average speed of 703 miles/hour, which is already faster than the speed of sound. I hope there is some sort of measurement mistake here. 
+The more I read about it, the less normal this seems to me. 
+
+```{r avg_speed}
+average_speed <- flights %>%
+  mutate(speed = distance/air_time*60) %>%
+  arrange(desc(speed))
+
+tibble(average_speed)
+
+filter(airports, faa == "ATL")
+```
+
+#### • For diamonds data, create a new variable named carat_group, which groups data by less than 1 carat, 1-2 carat, 2-3 carat and greater than 3 carat.
+
+It seems that most diamonds found are less than 1 carat. 
+
+```{r diamond_carat_group}
+diamond_carat_group <- diamonds %>%
+  mutate(carat_category = case_when(
+    between(carat, 0, 1) ~ "< 1 carat",
+    between(carat, 1, 2) ~ "1-2 carat",
+    between(carat, 2, 3) ~ "2-3 carat",
+    between(carat, 3, 9) ~ "3+ carat",
+    .default = NA
+  ))
+ 
+ggplot(diamond_carat_group) +
+  geom_bar(aes(x = carat_category, fill = carat_category)) +
+  labs(x = "Carat Category",
+       title = "Number of diamonds in each carat category.")
+```
+
+### (e) group_by and summarize
+
+
+#### • Find which airport around NYC had the worst delay on average.
+
+The data is telling us that Newark has the worst delays averaging at around 15 minutes. JFK comes at a close second with 12 minutes on average while 
+LaGuardia is doing well with only an average of 10 minutes of delay per flight.
+
+```{r worst_delay}
+worst_delay <- flights %>%
+  group_by(origin) %>%
+  summarize(delay = mean(dep_delay, na.rm = TRUE))
+
+tibble(worst_delay)
+```
+
+#### • Find which airport around NYC had the worst average delay on December 24, 2013.
+
+On Christmas Eve 2013, Newark still managed to have the worst delays. 
+
+```{r worst_delay_christmas}
+worst_delay_christmas <- flights %>%
+  filter(month == 12, day == 24) %>%
+  group_by(origin) %>%
+  summarize(delay = mean(dep_delay, na.rm = TRUE))
+
+tibble(worst_delay_christmas)
+```
+
+#### • Find which origin has the most destinations?
+
+It looks like Newark International Airport has the most destinations out of the three that are in the city. 
+
+```{r most_dest}
+destinations <- flights %>%
+  group_by(origin) %>%
+  summarize(n_dest = dest[!duplicated(dest)])
+
+tibble(destinations)
+
+jfk <- sum(destinations$origin == "JFK")
+ewr <- sum(destinations$origin == "EWR")
+lga <- sum(destinations$origin == "LGA")
+
+most_dest <- data.frame(
+  origin = c("JFK", "EWR", "LGA"),
+  airports = c(jfk, ewr, lga)
+)
+
+tibble(most_dest)
+```
+
+## 2. Data Transformation and Visualization with the flights data set
+
+
+Working with the data set flights in the package nycflights13, answer the following questions by performing necessary data transformation/visualization.
+
+
+### (a) Create a histogram of arrival delays (excluding NAs) for all flights in June and July. Comment on your findings.
+
+The results show that July definitely has more delays compared with June in 2013. 
+At the same time, July also seems to have more early arrivalals compared with June. 
+This might be due to the amount of traffic that flows through airports 
+during summer vacation months. There might just be more flights in July compared with June 
+such that the emperical number of delays and early arrivals go up.
+
+```{r arrival_delays}
+arrival_delays <- flights %>%
+  filter(between(month, 6, 7))
+
+ggplot(arrival_delays) +
+  geom_histogram(aes(x = arr_delay, fill = as.factor(month)), bins = 90) +
+  xlim(-60, 300) +
+  labs(x = "Delay in minutes", y = "Number of flights ",
+       title = "Histogram of delayed flights in June and July",
+       subtitle = "Seperated by color",
+       fill = "Month")
+```
+
+### (b) Create a smooth line graph of arrival delays vs departure delays for all flights departing from EWR on the first day of each month. Comment on your findings.
+
+For most months, it seems that arrival and departure delays are linearly related to each other. 
+This is evident by the lines running throuhg each graph. It is no surprise that the number of 
+delays increases during the months of July and August due to those months being the high seasons. 
+
+
+However, it seems that as the departure delay time increases, the arrival delay time seems to 
+become less. In other words, the derivative of the graph of arrival vs departure delay is a 
+decreasing function. This might be explained throught that when flights depart a few hours after 
+their intended departure time, they have more "buffer room" to speed up and catch up with their 
+planned flight time.  
+
+
+```{r first_day_delays}
+first_day_delays <- flights %>%
+  filter(day == 1)
+
+ggplot(first_day_delays, aes(x = dep_delay,
+  y = arr_delay, color = as.factor(month))) +
+  geom_point() +
+  geom_smooth() +
+  xlim(-20, 300) +
+  ylim(-60, 300) +
+  facet_wrap(~ month) +
+  labs(x = "Departure Delay in minutes", y = "Arrival Delay in minutes",
+       title = "Dot plots of Arrival and Departure on the first day of each Month",
+       fill = "Month")
+```
+
+### (c) Find the flights that actually departed with the shortest travel distance. What is its origin and destination airport?
+
+From this graph, it seems that the shortest flight out of NYC by travel distance is headed towards 
+Philadelphia. The flights take about 30 minutes on average and leave from both JFK and Newark
+
+```{r shortest_distance}
+shortest_distance <- flights %>%
+  select(origin, dest, distance, air_time) %>%
+  arrange(distance) %>%
+  filter(!is.na(air_time))
+
+shortest_distance  <- shortest_distance[1:500, ]
+
+ggplot(shortest_distance) +
+  geom_boxplot(aes(x = dest, y = air_time, fill = origin)) +
+  labs(x = "Destination airport of shortest flight", y = "Air time in minutes",
+       title = "Analysis of the 500 shortest flights in 2013",
+       fill = "Origin")
+```
+
+### (d) Create a new categorical variable with two labels. Flights with a travel distance shorter than 500 miles are marked as “short-distance”, and otherwise “long-distance”. Create a bar plot to compare the number of flights in each category.
+
+
+It seems that when comparing short- and long-distance flights, there are about 
+3x more long-distance flights compared with short distance ones.
+
+```{r short_vs_long}
+short_vs_long <- flights %>%
+  mutate(flight_distance_category = case_when(
+    distance < 500 ~ "short-distance",
+    distance >= 500 ~ "long-distance"
+  ))
+
+ggplot(short_vs_long, aes(x = flight_distance_category)) +
+  geom_bar(position = "dodge", aes(fill = as.factor(month))) +
+  labs(x = "Category of flight", y = "Number of flights ",
+       title = "Number of short- vs long-distance flights from NYC in 2013",
+       fill = "Distance category")
+```
+
+### (e) Find the destination airport that has the longest average departure delay by creating a graph.
+
+It looks like `CAE` or Columbia Metropolitan Airport has the longest delays.
+
+
+```{r longest_delay}
+longest_delay <- flights %>%
+  group_by(dest) %>%
+  select(dest, dep_delay) %>%
+  mutate(avg_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  distinct(dest, .keep_all = TRUE) %>%
+  arrange(desc(avg_delay)) %>%
+  filter(avg_delay > 20)
+
+
+ggplot(longest_delay) +
+  geom_boxplot(aes(dest, avg_delay))
+
+filter(airports, faa == "CAE")
+```
+
+### (f) Answer the question in (d) without creating a graph.
+
+It looks like `CAE` or Columbia Metropolitan Airport has the longest delays.
+
+
+```{r longest_delay_1}
+longest_delay_1 <- flights %>%
+  group_by(dest) %>%
+  select(dest, dep_delay) %>%
+  mutate(avg_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  distinct(dest, .keep_all = TRUE) %>%
+  arrange(desc(avg_delay))
+
+tibble(longest_delay_1[1:10, ])
+```
+
+### (g) Find the carriers with the highest and the lowest average flight speed for all their flights in the data set.
+
+The fastest carrier is `HA` which stands for Hawaiian Airlines. This is understandable as they 
+have the longest leg to fly. 
+
+The slowest carrier is `YV` which stands for Mesa Airlines. This airline does not seem to be a 
+major airline and explains the leisurely pace at which the planes fly. 
+
+
+```{r avg_flight_speed}
+avg_flight_speed <- flights %>%
+  group_by(carrier) %>%
+  mutate(speed = mean(distance / air_time * 60, na.rm = TRUE)) %>%
+  distinct(dest, .keep_all = TRUE) %>%
+  select(carrier, speed)
+
+filter(avg_flight_speed, speed == max(avg_flight_speed$speed))
+filter(avg_flight_speed, speed == min(avg_flight_speed$speed))
+
+filter(airlines, carrier == "HA")
+filter(airlines, carrier == "YV")
+```
+
+### (h) (Bonus, not required) Find flights on which weekday (from Monday to Sunday) had the longest departure delay on average.
+
+Done. Is there a better way to do this problem? I think I'm rather inefficient.
+
+```{r longest_dep_weekday}
+longest_dep_weekday <- flights %>%
+  mutate(day_of_week = weekdays(time_hour)) %>%
+  mutate(flight_number = paste(carrier, as.character(flight))) %>%
+  group_by(day_of_week, flight_number) %>%
+  summarize(day_of_week, flight_number,
+            avg_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  distinct(day_of_week, flight_number, .keep_all = TRUE)
+
+days <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+results <- list()
+
+for (day in days) {
+  result <- longest_dep_weekday %>%
+    filter(day_of_week == day) %>%
+    arrange(desc(avg_delay)) %>%
+    head(1)
+  results[[day]] <- result
+}
+
+for (day in days) {
+  cat("For", day, ":", "\n")
+  print(results[[day]])
+  cat("\n")
+}
+
+```
+
+## 3. Analyzing the seattlepets data set
+
+
+For the following questions, analyze the data set seattlepets in the package openintro. Read the help
+document and make sure that you understand the basic information about the data set before analysis. 
+
+### (a) How many species are there in the data set? What are they?
+
+It looks like there are a lot of dogs and cats in seattle, but also goats and pigs..? 
+There are 4 species in total.
+
+
+```{r species_count}
+species_count <- seattlepets %>%
+  group_by(species) %>%
+  summarize(count = n())
+
+species_count
+```
+
+### (b) What are the three most common pet names in Seattle?
+
+
+According to the data provided, Lucy, Charlie, and Luna are the most common pet names in Seattle.
+
+
+```{r pet_names}
+pet_names <- seattlepets %>%
+  group_by(animal_name) %>%
+  filter(!is.na(animal_name)) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+pet_names[1:3, ]
+```
+
+### (c) What are the ten most common pet names for cats? What are the ten most common pet names for dogs? Write a code to print the result and their frequencies.
+
+
+Names like Lucy, Luna, Charlie, etc. are all really popular names. 
+
+```{r dog_cat_common_names}
+common_names <- seattlepets %>%
+  filter(!is.na(animal_name)) %>%
+  group_by(animal_name, species) %>%
+  summarize(count = n())
+
+species <- c("Dog", "Cat")
+
+count_table <- list()
+
+for (i in species) {
+  temp <- common_names %>%
+    filter(species == i) %>%
+    arrange(desc(count)) %>%
+    head(10)
+  count_table[[i]] <- temp
+}
+
+for (i in species) {
+  cat("For", i, ":", "\n")
+  print(count_table[[i]])
+  cat("\n")
+}
+
+count_table
+```
+
+### (d) How many names appear more than 100 times in the data set excluding “NA”?
+
+There are 56 names that appear more than 100 times in the seattlepets dataset. 
+
+```{r names_freq}
+names_freq <- seattlepets %>%
+  group_by(animal_name) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  filter(count >= 100 & animal_name != "NA")
+
+nrow(names_freq)
+```
+
+### (e) For all names that appear more than 100 times in the data set, which has the highest “cat_to_dog” ratio? Which has the lowest? The “cat_to_dog” ratio can be computed this way - if a name appears 200 times, in which 150 are for cats and 50 are for dogs, the ratio is 150/50 = 3.
+
+While Riley had the highest dog to cat ratio, Shadow had the highest cat to dog ratio. 
+
+This means that Riley is way more likely to be used for dogs (understandable because riley is 
+somewhat of a wild name and suitable for dogs) while shadow is more likely to be used for cats. 
+
+```{r cat_to_dog_ratio}
+#create a dataframe with the count given the same species and name
+count_species_name <- seattlepets %>%
+  filter(!is.na(animal_name)) %>%
+  group_by(animal_name, species) %>%
+  summarize(count = n())
+
+#copy the code from above to see the 100 most common pet names in seattle
+names_freq <- seattlepets %>%
+  group_by(animal_name) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  filter(count >= 100 & animal_name != "NA")
+
+#initialize a list with 2 subdataframes (dog/cat) that will count the frequency of names for both types of animals
+sep_species <- list()
+
+#initialize a new dataframe called ratios where results will be funneled in for top 100 pets
+ratio <- data.frame(
+  Name <- character(),
+  cat_to_dog <- numeric(),
+  dog_to_cat <- numeric()
+)
+
+#add entries to sep_species list
+for (i in c("Dog", "Cat")) {
+
+#for each species in the dataframe, filter out the dataframe and add it to the sep_species dataframe
+  sep_species[[i]] <- count_species_name %>%
+    filter(species == i)
+}
+
+#make a another for loop that adds a new entry to the ratio dataframe for all the most popular pet names
+for (name in names_freq$animal_name) {
+
+    count_dog <- sep_species$Dog %>% filter(animal_name == name)
+    count_cat <- sep_species$Cat %>% filter(animal_name == name)
+
+    new_data <- data.frame(
+        Name = name,
+        cat_to_dog = (count_cat$count / count_dog$count),
+        dog_to_cat = (count_dog$count / count_cat$count)
+    )
+    ratio <- rbind(ratio, new_data)
+}
+
+#filter out all the names
+ratio <- ratio %>%
+  arrange(cat_to_dog)
+
+head(ratio, 1)
+tail(ratio, 1)
+```

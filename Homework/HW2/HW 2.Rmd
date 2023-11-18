@@ -1,0 +1,304 @@
+---
+title: "STA 305 HW 2"
+author: "Jacky Guan"
+date: "2023-09-26"
+output: pdf_document
+---
+
+First, we will proceed to load the required libraries.
+
+
+```{r setup, message = FALSE}
+library(tidyverse)
+library(openintro)
+library(ggridges)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+
+## Data visualization tasks with `loans_full_schema` data set
+
+
+
+Finish the following data visualization tasks using the `loans_full_schema` data set in `openintro` library. For each task, you need to summarize what you learn from the graph accurately and comprehensively (but don’t over-read your graph).
+
+Here is a preview of the dataset:
+
+
+```{r loans_full_schema}
+tibble(loans_full_schema)
+```
+
+
+### 1. Create a histogram of a numeric variable that you select and plot a density curve on top of the histogram. Carefully select bin numbers/sizes/boundaries to make the plot informative.
+
+
+For this question, I've selected the `annual_income` variable and plotted it on a graph. 
+I've excluded all data points above 500k/year as those were rather extreme outliers which hindered visualization of the greater picture.
+
+For this dataset, it seems that most who take out a loan have a median income of around $65,000. The middle 50% of people this dataset, 
+as evident by the 5 number summary below, have an income between $45,000 and $95,000.
+
+
+```{r numdensity}
+ggplot(data = loans_full_schema, aes(x = annual_income)) +
+    geom_histogram(aes(y = after_stat(density)),
+    fill = "magenta", color = "magenta", binwidth = 10000) +
+    geom_density(color = "blue", size = 2) +
+    labs(x = "Annual Income (USD)", y = "Density",
+    title = "Annual Income of Borrowers") +
+    xlim(0, 500000) +
+    theme(plot.title = element_text(hjust = 0.5))
+
+fivenum(loans_full_schema$annual_income)
+```
+
+
+### 2. Create a density plot with aesthetic grouping or ridged density plot to compare the effect of a categorical/discrete variable on the distributions of a numeric variable.
+
+
+For this question, I chose to compare the density functions for credit limit against people with income statuses ranging from 
+Verified, Source Verified, and Not Verified. 
+
+It seems that those with a verified source of income have a greater chance of obtaining a higher credit limit. 
+This is evident in the blue and green graph as total credit limit approaches 1e+06, there is still a percentage of people 
+who have obtained a higher credit limit.  
+
+
+```{r ridged_density}
+ggplot(data = loans_full_schema,
+aes(x = total_credit_limit, y = verified_income)) +
+    geom_density_ridges(alpha = 0.5,
+    aes(fill = verified_income, color = verified_income)) +
+    labs(x = "Total Credit Limit (USD)", y  = "Source Status",
+    title = "Total Credit Limit vs Income Status") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### 3. Create a bin heatmap to study the relationship between two numeric variables.
+
+
+In this plot, interest rates were compared with respective annual incomes.
+
+
+It seems that interest rates seemed to vary and mostly hovered bwtween 5% and 20%. 
+It also looks like most people in this dataset are making around or below $200,000/year. 
+From the graph, we can see that as Annual Income approaches $0/year, the interest rate becomes volatile and the density of datapoints begins to increase. 
+
+
+```{r bin_heatmap}
+ggplot(data = loans_full_schema) +
+    geom_bin_2d(aes(x = annual_income, y = interest_rate / 100)) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 0.35)) +
+    labs(x = "Annual Income (USD)", y = "Interest Rate",
+    title = "Interest Rate compared with Annual Income") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### 4. Use `facet_wrap` to create an informative plot.
+
+
+I used `facet_wrap` to examine the relationship between annual income and the total credit limit 
+for people taking out a loan belonging to 3 different categories pertaining to their homeownership status: Existing Morgage, Own Property, and Rented Property.
+
+
+The results were that those who lived in a morgage tended to have a much higher credit limit when compared with those with other statuses.
+While people who rent a place to live have the least credit availability, those who own their property only have a greater credit limit compared 
+with those renting their house.
+
+
+One explanation might be becasue people who take out a loan, especially a large loan for their house, go through a lengthy approval process 
+which ensures they have the financial capabilities to pay the loan back. Through this, their credit score increases dramatically 
+which grants them a higher credit limit. Those who own their houses might not have a long history of borrowing or might even have limited 
+financial capabilities. Their house might be inherited, and for said reasons among others, house ownership does not neccecarily speak to 
+one's financial capabilities. On the other hand, it is understandable that those who rent their home have a low credit limit as their living 
+situation is likely to be more volatile than others.
+
+
+```{r facet_wrap}
+ggplot(data = loans_full_schema,
+aes(x = annual_income, y = total_credit_limit)) +
+    facet_wrap(~ homeownership) +
+    geom_point(aes(color = verified_income)) +
+    labs(x = "Annual Income (in USD x 10^3)", y = "Total Credit Limit (USD)",
+    title = "Annual Income with the corresponding Credit Limit") +
+    ylim(0, 1000000) +
+    scale_x_continuous(labels = scales::dollar_format(scale = 1e-3),
+    limits = c(0, 350000)) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Here is the image in a higher resolution for greater clarity.
+
+
+```{r image, fig.align = 'center', out.width = "120%"}
+knitr::include_graphics("/Users/jacky/Documents/SEM 3/STA 305/Homework/HW 2/facet_wrap.img", error = FALSE)
+```
+
+
+### 5. Use `facet_grid` to create an informative plot.
+
+
+Here, I used the same variables as above but added another category to see who was taking out the loan. 
+It seems that there are a fair number of applicants who are applying jointly and it seems that they, 
+on average, have a lower credit limit compared with the individual counterparts. 
+
+
+For example, those in the rent category who are applying jointly are eligible, on average, for 
+less credit compared with their individual counterparts. This is the same across all three 
+homeownership statuses and may be an indication that those who wish to jointly apply for a loan are at a disadvantage. 
+
+
+```{r facet_grid, out.width="120%"}
+table(loans_full_schema$application_type)
+
+ggplot(data = loans_full_schema,
+aes(x = annual_income, y = total_credit_limit)) +
+    facet_grid(homeownership ~ application_type) +
+    geom_point(aes(color = verified_income)) +
+    labs(x = "Annual Income (USD)", y = "Total Credit Limit (USD)",
+    title = "Annual Income with the corresponding Credit Limit",
+    subtitle = "Seperated into Individual/Joint
+    loan and Homeownership status") +
+    xlim(0, 350000) + ylim(0, 1000000) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r image2, fig.align = 'center', out.width = "120%"}
+knitr::include_graphics("/Users/jacky/Documents/SEM 3/STA 305/Homework/HW 2/facet_grid.jpg")
+```
+
+
+## Data visualization and exploration tasks with `gpa` data set The `gpa` data set is available through `openintro` package in R.
+
+
+Here is a preview of the dataset:
+
+
+```{r gpa}
+tibble(gpa)
+```
+
+
+### 1. By doing your own research, give the meaning of each variable to your understanding. 
+
+
+The survey is a survey with a sample size of 55 students from Duke University. They are asked about their GPA, 
+number of hours they study at night, number of nights they go out, and their gender.
+
+
+### 2. Does more study hours lead to higher gpa for this data set?
+
+
+While it seems that guys might hit a sweet spot by studying less, 
+girls seem to have the same GPA regardless of how much they study.
+However, it is still worth noting that the dataset is too small to provide significant results.
+
+
+```{r hours_gpa}
+ggplot(gpa, aes(x = gpa, y = studyweek)) +
+    geom_point(aes(color = gender)) +
+    geom_smooth(aes(fill = gender)) +
+    labs(x = "GPA", y = "Hours/Week",
+    title = "Hours studied/week vs GPA") +
+    ylim(0, 60) + xlim(3, 4) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### 3. Does more going-out nights lead to lower `gpa` for this data set?
+
+
+It seems that while for girls, there seems to be a certain correlation bewteen going out 
+and a higher GPA, the same cannot be said for boys. However, given the small dataset, 
+all assumptions remain volatile by nature.
+
+
+```{r out_gpa}
+ggplot(gpa, aes(x = gpa, y = out)) +
+    geom_point(aes(color = gender)) +
+    geom_smooth(aes(fill = gender)) +
+    labs(x = "GPA", y = "Nights/Week",
+    title = "Nights out/week vs GPA") +
+    xlim(3, 4) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### 4. Is there a correlation between sleeping hours and the number of going-out nights?
+
+
+While the dataset is quite small, the number of hours 
+slept seems to increase as the number of nights out increases.
+
+
+```{r sleep_gpa}
+ggplot(gpa, aes(x = out, y = sleepnight)) +
+    geom_point() +
+    geom_smooth() +
+    labs(x = "Nights Out", y = "Hours/Day",
+    title = "Average hours slept/day vs Nights Out") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### 5. Do female students study more hours than male students in the data set?
+
+
+I think girls tend to study better, especially when 
+looking at the 5 number summary, where every single value 
+is greater for girls compared with guys.
+
+
+```{r gb_gpa}
+ggplot(gpa, aes(x = studyweek, y = gender)) +
+    geom_boxplot(aes(fill = gender)) +
+    labs(x = "Hours studied per week", y = "Gender",
+    title = "Gender vs Hours studied per week") +
+    theme(plot.title = element_text(hjust = 0.5))
+
+male <- filter(gpa, gender == "male")
+fivenum(male$studyweek)
+
+female <- filter(gpa, gender == "female")
+fivenum(female$studyweek)
+```
+
+
+### 6. Do male students go out more than female students in the data set?
+
+
+Yes, it seems that boys go out more compared with girls.
+
+
+```{r gb_out}
+ggplot(gpa, aes(x = out, y = gender)) +
+    geom_boxplot(aes(fill = gender)) +
+    labs(x = "Nights out per week", y = "Gender",
+    title = "Gender vs Nights out per week") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### 7. Compare people that go out the most with how much they sleep.
+
+
+It seems that there are is no significant relationship between 
+nights spent out and the hours slept. The graphs were adjusted to fill the entire bar to 
+see the relative proportions of people who went out given the hours slept. One can see 
+that the numbers are relatively uniform. 
+
+
+```{r sleep_out}
+ggplot(gpa, aes(x = sleepnight)) +
+    geom_bar(aes(fill = as.factor(ceiling(out))), position = "fill") +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+    labs(x = "Hours Slept", y = "Percentage",
+    title = "Nights out vs. hours slept") +
+    scale_fill_discrete(name = "Nights Spent Out") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
