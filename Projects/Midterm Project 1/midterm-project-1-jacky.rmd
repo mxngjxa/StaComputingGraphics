@@ -2,7 +2,7 @@
 title: "STA305 MIDTERM PROJECT #1"
 author: 'Jacky Guan'
 date: 'Oct 31st, 2023'
-output: pdf_document
+output: html_document
 ---
 
 Loading required libraries, setting local working directory for reference.
@@ -954,9 +954,7 @@ ggplot(snack_bmi, aes(bmi, snack)) +
 
 ```{r activity_bmi}
 activity_bmi <- obesity %>%
-  select(bmi, activity) %>%
-  mutate(snack = fct_reorder(snack,
-                             "Never", "1-2 days", "2-4 days", "4-5 days"))
+  select(bmi, activity)
 
 ggplot(activity_bmi, aes(bmi, activity)) +
   geom_density_ridges(aes(fill = activity), alpha = 0.5) +
@@ -1473,3 +1471,96 @@ https://doi.org/10.1093/ajcn/87.4.801
 Obesity Level Estimation Software based on Decision Trees. 
 Journal of Computer Science. 15. 10. 10.3844/jcssp.2019.67.77. 
 https://www.researchgate.net/publication/330262276_Obesity_Level_Estimation_Software_based_on_Decision_Trees
+
+
+
+## Make up questions:
+
+
+
+
+### a) Explain why nearly all Obesity_Type_II samples are male ones, while all Obesity_Type_III samples are female ones.
+
+
+
+The reason for this is because the model was trained on data which had a remarkably biased distributions, that is out of 
+all real datapoints collected, those with 
+Obesity_Type_II 
+were almost exclusively men and those with 
+Obesity_Type_III 
+were almost exclusively women. 
+
+```{r}
+oblv2 <- unfiltered_obesity %>%
+  filter(obesity_level == "Obesity_Type_II") %>%
+  group_by(gender) %>%
+  summarise(count = n())
+
+oblv3 <- unfiltered_obesity %>%
+  filter(obesity_level == "Obesity_Type_III") %>%
+  group_by(gender) %>%
+  summarise(count = n())
+
+print(oblv2)
+print(oblv3)
+```
+
+
+### b) One of the most shocking results from data exploration is the mysterious effect of CAEC (consumption of food between meals) with BMI. There is a startling big difference between the group answering "sometimes" and "frequently", which is unusual to me. Give at least three different explanations of this observation based on either speculation, research or data analysis (if there is anything that can explain this in the data set).
+
+
+#### Dietary Habits and Nutritional Quality
+
+Snacking only plays a secondary role in determining the overall health of an individual, 
+and there is little information given about the quality of the snacks, the caloric content 
+thereof, just to name a few factors which impact BMI and weight. 
+Further holistic examination of a person is required to determine their BMI and 
+analysis should be more in depth and broad. 
+
+#### Physical Activity Levels
+
+Variations in physical activity levels could influence the relationship between 
+snacking frequency and BMI. Those who snack frequently may not be able to compensate their  
+increased caloric intake with increased physical activity, leading to weight gain. Conversely, 
+individuals who snack occasionally may engage in more physical activities, which results 
+in a lower BMI. Further analysis between snacking frequency, activity, main meal count, 
+etc. is further warrented to reach a more conclusive result.
+
+#### Metabolic Response and Hormonal Factors
+
+
+There are also a fleet of unnamed variables in this dataset which have not yet been 
+characterized such as mood, metabolic functions, as well as hormonal factors, which 
+are, to a significant extent, independent from snacking frequency yet play a substantial 
+role on BMI. 
+
+
+
+### c) Add more variables into your model and see how the error changes (standard error and r-square value). Try one model with two more variables, and try one model with all variables (search how to include all variables without writing all their names in your model). 
+
+```{r}
+attach(obesity_modelling)
+
+model_2 <- lm(bmi ~ age + fam_hist +
+              high_cal + intense + monitor_calorie + meal_count)
+
+model_3 <- lm(bmi ~ gender + age + fam_hist + high_cal + freq_vegetable + meal_count + snack + smoke + water + monitor_calorie + activity + screen_time + alcohol + transportation + intense)
+
+summary(model_2)
+summary(model_3)
+```
+
+
+```{r model2}
+plot(model_2, which = 1)
+plot(model_2, which = 3)
+plot(model_2, which = 2)
+```
+
+
+
+```{r model3}
+plot(model_3, which = 1)
+plot(model_3, which = 3)
+plot(model_3, which = 2)
+```
