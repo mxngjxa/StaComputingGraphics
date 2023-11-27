@@ -205,7 +205,7 @@ bank <- bank %>%
 
 * Visualize the effect of education level on Average Utilization Ratio
 
-```{r edu_ratio}
+```{r edu_ratio, fig.width=10}
 ggplot(bank) +
   facet_grid(~ Education_Level) +
   geom_histogram(aes(Avg_Utilization_Ratio, fill = Education_Level)) +
@@ -213,7 +213,8 @@ ggplot(bank) +
   labs(x = "Utilization Ratio",
        y = "Count",
        title = "Effect of Education Level on Average Utilization Ratio",
-       fill = "Education Level")
+       fill = "Education Level") +
+  theme(axis.text.x = element_blank())
 ```
 
 
@@ -252,7 +253,7 @@ It seems that there is a plausible correlation with being once married and the
 increse in time spent in front of a tv. For people once married, the median time 
 spent in front of a tv seems to be greater compared to unmarried and married individuals.
 
-```{r tv_married}
+```{r tv_married, fig.width=10}
 ggplot(gss_cat) +
   facet_grid(~ marital) +
   geom_histogram(aes(tvhours, fill = marital)) +
