@@ -1,0 +1,264 @@
+---
+title: "STA 305 HW54"
+author: "Jacky Guan"
+date: "2023-11-24"
+output: pdf_document
+---
+
+
+Loading Required libraries
+```{r setup, message=FALSE}
+library(tidyverse)
+library(openintro)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+```{r setwd, message=FALSE, eval = FALSE}
+setwd("Documents/SEM\ 3/STA\ 305/Homework/HW5")
+```
+
+## 1. Regular expressions
+
+
+
+
+
+
+
+### a) Use the words data set, find all the words that match the following pattern:
+
+
+* are exactly four letters long
+
+```{r four}
+words_4 <- words %>%
+  tibble() %>%
+  filter(nchar(.) == 4)
+
+print(words_4)
+```
+
+
+
+* are either four or five letters long
+
+
+```{r four/five}
+words_45 <- words %>%
+  tibble() %>%
+  filter(nchar(.) == 4 | nchar(.) == 5)
+
+print(words_45)
+```
+
+* the second letter is “s” or “t”
+
+```{r s/t}
+s_t <- words %>%
+  tibble() %>%
+  filter(str_detect(words, "^.{1}[st]"))
+
+print(s_t)
+```
+
+
+
+* contains the pattern like “oxx” where “o” is one letter and “x” is another letter 
+
+```{r oxx}
+oxx <- words %>%
+  tibble() %>%
+  filter(str_detect(words, "o(.)\\1"))
+
+print(oxx)
+```
+
+
+* contains “a”, “e” and “o” at the same time
+
+```{r aeo}
+aeo <- words %>%
+  tibble() %>%
+  filter(str_detect(words, "^(?=.*a)(?=.*e)(?=.*o).*"))
+
+print(aeo)
+```
+
+
+
+
+### b) Use the sentences data set, make the following plot
+
+
+* a bar plot counting sentences with and without “the” (or “The”).
+
+```{r the}
+the <- sentences %>%
+  str_detect("(the|The)") %>%
+  tibble() %>%
+  rename(Contains_The = ".")
+
+ggplot(the) +
+  geom_bar(aes(Contains_The, fill = Contains_The)) +
+  theme_minimal() +
+  labs(x = "Contains the/The in the Sentence",
+       y = "Number of Sentences",
+       title = "Sentences Containing \"The\"",
+       fill = "Legend") +
+  geom_text(
+    aes(x = factor(Contains_The), label = after_stat(count)),
+    stat = "count",
+    vjust = -0.5,
+    color = "black",
+    size = 4
+  )
+```
+
+
+* a scatterplot with x being the average length of words in a sentence, and y being the number of words starting with “a” or “e” or “i” or “o” or “u” in the sentence.
+
+```{r scatterplot}
+sentence_summary <- sentences %>%
+  tibble() %>%
+  rename(sentence = ".") %>%
+  mutate(word_count = str_count(sentence, " ") + 1,
+         vowel_start = str_count(sentence, "\\b[aeiouAEIOU]")) %>%
+  ggplot() +
+  geom_point(aes(word_count, vowel_start), position = "jitter") +
+  theme_minimal() +
+  labs(x = "Word Count",
+       y = "Number of Words beginning with a Vowel",
+       title = "Vowel as the First Letter vs Number of Words in Sentence")
+
+sentence_summary
+```
+
+
+
+### c) Application
+
+
+#### i) Download the Oxford English Dictionary as a “.txt” file from https://canvas.feitian.edu/files/9699/ download?download_frd=1
+
+Done
+
+#### ii) Read it into RStudio with read_lines() function (check how to use it by yourself)
+
+```{r read_dict}
+oxford <- tibble(read.delim("Oxford_English_Dictionary.txt"))
+```
+
+#### iii) Turn the dictionary into a tibble and remove all blank lines
+
+
+#### iv) Use regular expression to extract all words for each item in a separate column named “words”
+
+
+```{r first_word}
+oxford <- oxford %>%
+  rename(definition = A) %>%
+  mutate(word = str_extract(definition, "\\b\\w+")) %>%
+  select(word, definition)
+```
+
+
+## 2. Factors
+
+```{r read_bank}
+bank <- tibble(read.csv("BankChurners.csv"))
+```
+
+### a) Use the BankChurners.csv to answer the following questions:
+
+* Which features can be regarded as a factor?
+
+Factor features include Attrition_Flag, Gender, Dependent_count, Education_Level, 
+Marital_Status, Income_Category, and Card_Category.
+
+* Which features can be regarded as an ordered factor (ordinal)?
+
+Of the aforementioned factors, Education_Level, Income_Category, Dependent_count, 
+and Card_Category can be considered ordered factors.
+
+* Read BankChurners.csv into RStudio, then change the columns that you answered above into factors or ordered factors.
+
+```{r change_names}
+bank <- bank %>%
+  mutate(across(c(Attrition_Flag, Gender, Marital_Status), as.factor)) %>%
+  mutate(Dependent_count = factor(Dependent_count, ordered = TRUE,
+                                  levels = c("0", "1", "2", "3",
+                                             "4", "5", "6"))) %>%
+  mutate(Education_Level = factor(Education_Level, ordered = TRUE,
+                                  levels = c("Uneducated", "High School",
+                                             "College", "Graduate",
+                                             "Post-Graduate", "Doctorate",
+                                             "Unknown"))) %>%
+  mutate(Income_Category = factor(Income_Category, ordered = TRUE,
+                                  levels = c("Less than $40K", "$40K - $60K",
+                                             "$60K - $80K", "$80K - $120K",
+                                             "$120K +"))) %>%
+  mutate(Card_Category = factor(Card_Category, ordered = TRUE,
+                                levels = c("Blue", "Silver", "Gold")))
+```
+
+
+
+* Visualize the effect of education level on Average Utilization Ratio
+
+```{r edu_ratio}
+ggplot(bank) +
+  facet_grid(~ Education_Level) +
+  geom_histogram(aes(Avg_Utilization_Ratio, fill = Education_Level)) +
+  theme_linedraw() +
+  labs(x = "Utilization Ratio",
+       y = "Count",
+       title = "Effect of Education Level on Average Utilization Ratio",
+       fill = "Education Level")
+```
+
+
+
+
+### b) Use the gss_cat data set
+
+
+* What are the levels of marital variable?
+
+
+The levels of marital status include the following:
+
+```{r gss_cat}
+levels(gss_cat$marital)
+```
+
+
+
+* Combine “Separated”, “Divorced”, “Widowed” into a new category “Once Married” 
+
+```{r once_married}
+gss_cat <- gss_cat %>%
+  mutate(marital = case_when(
+    marital == "Separated" ~ "Once Married",
+    marital == "Divorced" ~ "Once Married",
+    marital == "Widowed" ~ "Once Married",
+    TRUE ~ marital
+  ))
+```
+
+
+* Use the new levels, explore whether there is an effect of martial status on tvhours.
+
+It seems that there is a plausible correlation with being once married and the 
+increse in time spent in front of a tv. For people once married, the median time 
+spent in front of a tv seems to be greater compared to unmarried and married individuals.
+
+```{r tv_married}
+ggplot(gss_cat) +
+  facet_grid(~ marital) +
+  geom_histogram(aes(tvhours, fill = marital)) +
+  theme_linedraw() +
+  labs(x = "TV Hours",
+       y = "Count",
+       title = "Effect of Marital Status on Hours Spent Watching TV",
+       fill = "Marital Status")
+```
