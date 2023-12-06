@@ -1,0 +1,344 @@
+---
+title: "STA 305 HW6"
+author: "Jacky Guan"
+date: "2023-12-05"
+output: pdf_document
+---
+
+
+Loading Required libraries
+```{r setup, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(nycflights13)
+library(lubridate)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center")
+```
+
+
+## 1. Date and Time - nycflights13 data set
+
+
+
+
+#### How many timezones are there for all the destination airports (excluding NA)?
+
+
+There are a total of 6 rows when it comes to destination airports.
+
+```{r timezones}
+timezones <- flights %>%
+  select(dest) %>%
+  filter(!is.na(dest)) %>%
+  left_join(airports, c("dest" = "faa")) %>%
+  filter(!is.na(tz)) %>%
+  select(tz) %>%
+  group_by(tz) %>%
+  mutate(count = n()) %>%
+  distinct(tz, .keep_all = TRUE)
+
+print(timezones)
+print(nrow(timezones))
+```
+
+
+
+
+
+#### Use the data in flights and airports only along with R code to show the time difference (in hours) between New York City and the following cities:
+
+
+* Chicago
+
+Chicago is 1 hour behind NY.
+
+```{r chicago_ny}
+chicago_ny <- flights %>%
+  select(dest, origin) %>%
+  filter(dest == "ORD") %>%
+  left_join(airports, c("dest" = "faa")) %>%
+  left_join(airports, c("origin" = "faa")) %>%
+  distinct(dest, .keep_all = TRUE)
+
+delta_t <- chicago_ny$tz.x - chicago_ny$tz.y
+print(delta_t)
+```
+
+
+* Dallas
+
+Dallas is 1 hour behind NY.
+
+```{r dallas_ny}
+dallas_ny <- airports %>%
+  filter(str_detect(name, "Newark|Dallas")) %>%
+  distinct(tz, .keep_all = TRUE) %>%
+  mutate(delta_t = tz - lag(tz)) %>%
+  filter(!is.na(delta_t))
+
+print(dallas_ny$delta_t)
+```
+
+* Denver
+
+Denver is 2 hours behind NY.
+
+```{r denver_ny}
+denver_ny <- airports %>%
+  filter(str_detect(name, "Denver|Newark")) %>%
+  distinct(tz, .keep_all = TRUE) %>%
+  mutate(delta_t = tz - lag(tz)) %>%
+  filter(!is.na(delta_t))
+
+print(denver_ny$delta_t)
+```
+
+* Seattle
+
+Seattle is 3 hours behind NY.
+
+```{r seattle_ny}
+seattle_ny <- airports %>%
+  filter(str_detect(name, "Seattle|Newark")) %>%
+  distinct(tz, .keep_all = TRUE) %>%
+  mutate(delta_t = tz - lag(tz)) %>%
+  filter(!is.na(delta_t))
+
+print(seattle_ny$delta_t)
+```
+* Anchorage 
+
+Anchorage is 4 hours behind NY.
+
+
+```{r anchorage_ny}
+anchorage_ny <- airports %>%
+  filter(str_detect(name, "Anchorage|Newark")) %>%
+  distinct(tz, .keep_all = TRUE) %>%
+  mutate(delta_t = tz - lag(tz)) %>%
+  filter(!is.na(delta_t))
+
+print(anchorage_ny$delta_t)
+```
+
+* Honolulu
+
+Honolulu is 5 hours behind NY.
+
+```{r honolulu_ny}
+honolulu_ny <- airports %>%
+  filter(str_detect(name, "Honolulu|Newark")) %>%
+  distinct(tz, .keep_all = TRUE) %>%
+  mutate(delta_t = tz - lag(tz)) %>%
+  filter(!is.na(delta_t))
+
+print(honolulu_ny$delta_t)
+```
+
+#### Write a function Time_difference_NYC(dest) to compute the time difference (in hours) between any destination airport (in faa code) and New York City.
+
+```{r Time_difference_NYC}
+Time_difference_NYC <- function(dest) {
+  return <- airports %>%
+    filter( faa == dest | faa == "JFK") %>%
+    distinct(tz, .keep_all = TRUE) %>%
+    mutate(delta_t = tz - lag(tz)) %>%
+    filter(!is.na(delta_t))
+  return$delta_t
+}
+
+Time_difference_NYC("0S9") # Jefferson County International Airport
+Time_difference_NYC("JFK") # JFK in NYC
+Time_difference_NYC("SLC") # Salt Lake City
+Time_difference_NYC("AUS") # Austin Texas
+Time_difference_NYC("LAX") # Los Angeleles
+```
+
+
+### Write a function flight_time(dep_time, arr_time, origin, dest) to compute the actual flight time from the dep_time at the origin airport to the arr_time in the dest airport. 
+dep_time and arr_time should be in the form of an integer such as 830 (8:30am); origin and dest should be in faa codes.
+
+```{r travel_time}
+flight_time <- function(dep_time, arr_time, origin, dest) {
+  raw_flight_time <- arr_time - dep_time
+
+  origin_time <- airports %>%
+    filter(faa == origin) %>%
+    select(tz)
+
+  dest_time <- airports %>%
+    filter(faa == dest) %>%
+    select(tz)
+
+  delta_t <- dest_time - origin_time
+  numeric_time <- raw_flight_time + delta_t * 100
+
+  #for the case when hours and 
+  if (numeric_time %% 100 >= 60) {
+    numeric_time <- numeric_time + 40
+  }
+
+  hour <- as.character(numeric_time %/% 100)
+  minute <- as.character(numeric_time %% 100)
+
+  x <- paste(hour, minute)
+
+  time_hm <- hm(x)
+
+  formatted_time <- format(time_hm, format = "%I:%M%p")
+
+  return(formatted_time)
+}
+
+flight_time(1234, 2334, "JFK", "LAX")
+flight_time(815, 1545, "ORD", "SFO")
+flight_time(945, 1745, "ATL", "MIA")
+flight_time(1215, 2045, "DFW", "SEA")
+flight_time(1325, 2155, "DEN", "MSP")
+flight_time(1030, 1845, "LGA", "SJC")
+```
+
+
+## 2. Lists and Loops
+#### Write a code to create a list that contains 100 vectors, where the first vector is 1 alone, the second is 1 and 2, the third is 1,2,3 etc.
+
+```{r looping}
+my_list <- lapply(1:100, function(n) seq(1:n))
+
+print(head(my_list))
+```
+
+
+## 3. Functional
+Use map function to fulfill the following tasks from your midterm project data set. 
+
+#### First, create a numeric column BMI as instructed from the midterm project. Also create a categorical column obesity_flag which has the value of normal or underweight or overweight or obese depending on the categories for NObeyesdad.
+
+```{r obesity}
+setwd("/Users/jacky/Documents/SEM 3/STA305/Homework/HW6")
+obesity <- read.csv("obesity_dataset.csv")
+```
+
+```{r obesity_reformatting}
+obesity <- obesity %>%
+  mutate(Weight, Height, bmi = (Weight / (Height**2)))
+
+obesity <- obesity %>%
+  mutate(NObeyesdad = fct_reorder(NObeyesdad, bmi)) %>%
+  rename(obesity_level = NObeyesdad) %>%
+  rename(
+    gender = Gender,
+    age = Age,
+    height = Height,
+    weight = Weight,
+    fam_hist = family_history_with_overweight,
+    high_cal = FAVC,
+    freq_vegetable = FCVC,
+    meal_count = NCP,
+    snack = CAEC,
+    activity = FAF,
+    smoke = SMOKE,
+    water = CH2O,
+    monitor_calorie = SCC,
+    screen_time = TUE,
+    alcohol = CALC,
+    transportation = MTRANS
+  ) %>%
+  mutate(
+    obesity_flag = case_when(
+      obesity_level %in% c("Insufficient_Weight",
+                           "Normal_Weight") ~ "Normal or Underweight",
+      obesity_level %in% c("Overweight_Level_I",
+                           "Overweight_Level_II") ~ "Overweight",
+      obesity_level %in% c("Obesity_Type_I",
+                           "Obesity_Type_II", "Obesity_Type_III") ~ "Obese",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+
+
+#### • For all numeric variables (other than BMI and weight), compute the correlation coefficient with BMI, and sort your variables by your result in a descending order. Which variable has the biggest correlation coefficient? 
+Also explain the result for height. Why is the correlation coefficient a small number although BMI is directly calculated from height (and weight)?
+
+
+
+
+
+
+I believe that height doesn't play such a large role as height won't really determine one's weight, which has a 
+larger impact on BMi. As the name implies, BMI stands for body mass index and not body height index.
+
+
+```{r numeric_testing}
+numeric_vars <- sapply(obesity, is.numeric)
+numeric_obesity_vars <- obesity[, numeric_vars]
+
+bmi <- obesity$bmi
+
+cor_results <- lapply(colnames(numeric_obesity_vars), function(col) {
+  correlation_result <- cor(obesity[[col]], bmi)
+  tibble(Variable = col, cor_coeff = correlation_result)
+})
+
+cor_results_df <- bind_rows(cor_results)
+
+cor_results_df <- cor_results_df %>%
+  arrange(desc(cor_coeff))
+
+print(cor_results_df)
+```
+
+
+#### • For all categorical variables (other than the target variable), compute the p-value when doing the chi- square test between each of them and obesity_flag, and sort your variables by the result in an ascending order. Which variable is most relevant (smallest p-value)?
+
+
+
+It seems that snacking is the most relevant variable when it comes to correlation with BMI.
+
+
+```{r categorical_testing}
+cat_vars <- sapply(obesity, is.character)
+cat_obesity_vars <- obesity[, cat_vars]
+obesity_flag <- obesity$obesity_flag
+
+cat_results <- list()
+
+for (col in colnames(cat_obesity_vars)) {
+  contingency_table <- table(obesity[[col]], obesity_flag)
+  correlation_result <- chisq.test(contingency_table)
+  cat_results[[col]] <- correlation_result
+}
+
+cat_results_df <- bind_rows(lapply(cat_results, broom::tidy), .id = "Variable")
+
+
+cat_results_df <- cat_results_df %>%
+  arrange(p.value) %>%
+  print()
+```
+
+
+#### • For all numeric variables (other than BMI, weight and height), compute the p-value when doing the t-test between each of them and obesity_flag, and sort your in a descending order.
+
+
+```{r t_testing}
+num_vars <- sapply(obesity, is.numeric)
+num_obesity_vars <- obesity[, num_vars]
+obesity_flag <- obesity$obesity_flag
+
+num_results <- list()
+
+for (col in colnames(num_obesity_vars)) {
+  contingency_table <- table(obesity[[col]], obesity_flag)
+  correlation_result <- t.test(contingency_table)
+  num_results[[col]] <- correlation_result
+}
+num_results_df <- bind_rows(lapply(num_results, broom::tidy), .id = "Variable")
+
+
+num_results_df <- num_results_df %>%
+  arrange(desc(p.value)) %>%
+  print()
+```
