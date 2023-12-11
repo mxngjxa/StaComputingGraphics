@@ -1,0 +1,110 @@
+---
+title: "R Shiny Project"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    flex: true
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(lubridate)
+library(nycflights13)
+library(shiny)
+library(openintro)
+```
+
+Flight Delay Visualizer
+===
+
+Column {.sidebar}
+---
+
+### Input a Month and Day
+
+Please note that if the plot does not render, it may be due to an invalid combination of day and month. 
+
+
+```{r user_input_month_day}
+selectInput("Month", label = "Select a month to see flight data from:", choices = 1:12, selected = 1)
+selectInput("Day", label = "Select a date as well:", choices = 1:31, selected = 1)
+```
+
+
+
+Column
+---
+
+
+
+### 
+
+```{r render_plot}
+renderPlot({
+  filtered_flights <- flights %>%
+    filter(month == input$Month & day == input$Day) %>%
+    filter(!is.na(dep_delay)) %>%
+    filter(abs(dep_delay) < 200)
+  ggplot(filtered_flights, aes(x = dep_delay)) +
+    geom_histogram(aes(fill = origin), binwidth = 4) +
+    labs(
+      title = "Flight Delay Analysis",
+      x = "Departure Delay (minutes)",
+      y = "Number of flights delayed by x minutes"
+    ) +
+    theme_light()
+})
+```
+
+
+
+
+
+MPG dataset visualizer
+===
+
+
+Column {.sidebar}
+---
+
+
+### Exploring Highway MPG vs other factors in the `mpg` dataset.
+
+#### Filtered by manufacturer
+
+```{r user_input_mpg_cat}
+x <- c("model", "year", "cyl", "trans", "drv", "cyl", "fl", "class")
+selectInput("Category_X", label = "Select a category to compare:", choices = x, selected = "year")
+```
+
+
+Column
+---
+
+
+```{r render_mpg, out.height=20}
+renderPlot({
+  x <- input$Category_X
+  df <- mpg %>%
+    select(!!sym(x), hwy, manufacturer)
+  
+  formula <- as.formula(paste0("~", x))
+  
+  ggplot(df) +
+    geom_point(aes(hwy, manufacturer, color = manufacturer), size = 2) +
+    facet_wrap(formula, scales = "free") +
+    labs(
+      title = " ",
+      x = "Highway MPG"
+      ) +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size = 12),
+      strip.text = element_text(size = 12)
+    )
+})
+```

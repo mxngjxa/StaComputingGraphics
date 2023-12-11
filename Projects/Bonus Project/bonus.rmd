@@ -1,0 +1,318 @@
+---
+title: "STA305 MIDTERM BONUS HACKATHON"
+author: 'Meng Zhu, Jinglei Rao, and Jacky Guan'
+date: 'Nov 30th, 2023'
+output: html_document
+---
+
+Loading required libraries, setting local working directory for reference.
+
+```{r setwd, message=FALSE, eval = FALSE}
+setwd("Documents/SEM\ 3/STA\ 305/Projects/Bonus\ Project")
+```
+```{r setup, message=FALSE}
+library(tidyverse)
+library(ggridges)
+library(magrittr)
+library(gridExtra)
+adult <- read.csv("./adult.data", header = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center", fig.width=10, fig.height=7)
+```
+
+```{r renaming data}
+column_names <- c("age", "workclass", "fnlwgt", "education", "years_edu", "marital_status", "occupation", "relationship", "race", "sex", "capital_gain", "capital_loss", "hours_per_week", "native_country", "income")
+names(adult) <- column_names
+
+glimpse(adult)
+```
+
+```{r levels, eval=FALSE}
+education_levels <- c("Preschool", "1st-4th", "5th-6th", "7th-8th", "9th", "10th", "11th", "12th", "HS-grad", "Prof-school", "Some-college", "Assoc-voc", "Assoc-acdm", "Bachelors", "Masters", "Doctorate")
+employment_types <- c("Private", "Self-emp-not-inc", "Self-emp-inc", "Local-gov", "State-gov", "Federal-gov", "Without-pay", "Never-worked")
+marital_statuses <- c("Never-married", "Married-spouse-absent", "Married-AF-spouse", "Married-civ-spouse", "Divorced", "Separated", "Widowed")
+
+
+factor(adult$education, levels = education_levels)
+factor(adult$workclass, levels = employment_types)
+factor(adult$marital_status, levels = marital_statuses)
+```
+
+## EDA
+
+```{r age}
+ggplot(adult) +
+geom_histogram(mapping = aes(x = age), 
+               binwidth = 5, boundary = 50, 
+               color = "blue", fill="grey") +
+  labs(title = "Age Distribution",
+       x = "Age",
+       y = "Count")
+
+ggplot(adult, mapping = aes(x=age, y=income)) +
+  stat_boxplot(geom = "errorbar", width = 0.5) +
+  geom_boxplot(mapping = aes(fill=income)) +
+  labs(title = "Age vs Income",
+       x = "Age",
+       y = "Income")
+```
+
+
+```{r workclass}
+ggplot(data = adult) + 
+  geom_bar(mapping = aes(y = workclass, fill = workclass)) +
+  labs(title = "Workclass Distribution",
+       y = "Workclass",
+       x = "Count") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+
+
+ggplot(data = adult) + 
+  geom_bar(mapping = aes(y = workclass, fill = income), position = "fill") + 
+  labs(title = "Workclass vs Income",
+       y = "Workclass",
+       x = "Count") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+
+
+```
+
+```{r fnlwgt}
+ggplot(data = adult) +
+geom_histogram(mapping = aes(x = fnlwgt), 
+               color="blue", fill="grey") +
+  labs(title = "fnlwgt Distribution",
+       x = "fnlwgt",
+       y = "Count") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+
+
+ggplot(data = adult, mapping = aes(x=fnlwgt, y=income)) +
+  stat_boxplot(geom = "errorbar", width = 0.5) + 
+  geom_boxplot(mapping = aes(fill=income)) + 
+  labs(title = "fnlwgt vs Income",
+       x = "fnlwgt", 
+       y = "Income") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+```
+
+```{r education}
+ggplot(data = adult) + 
+  geom_bar(mapping = aes(y = education, fill = education)) +
+  labs(title = "Education vs Distribution",
+       y = "education",
+       x = "Count") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+
+
+ggplot(data = adult) + 
+  geom_bar(mapping = aes(y = education, fill = factor(income)), position = "fill") + 
+  labs(title = "Education vs Income",
+       y = "Education",
+       x = "Ratio") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 17),
+    axis.title = element_text(size = 14), 
+    axis.text = element_text(size = 12),
+    plot.margin = margin(1, 1, 1, 1, unit = "cm")
+  )
+```
+
+```{r years_edu}
+ggplot(data = adult) +
+geom_histogram(mapping = aes(x = years_edu), 
+               binwidth = 1, boundary = 10, 
+               color="blue", fill="grey") +
+  labs(title = "Years Educated Distribution",
+       x = "Years Educated",
+       y = "Count") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+
+
+ggplot(data = adult, mapping = aes(x=years_edu, y=income)) +
+  stat_boxplot(geom = "errorbar", width = 0.5) + 
+  geom_boxplot(mapping = aes(fill=income)) + 
+  labs(title = "Years Educated vs Income",
+       x = "Years Educated", 
+       y = "Income") +
+  theme(plot.title = element_text(hjust = 0.5, size=17),
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size=12),
+        plot.margin = margin(1,1,1,1, unit ="cm"))
+```
+
+```{r marital_status}
+ggplot(adult) +
+  geom_bar(aes(y = marital_status, fill = income), position = "dodge") +
+  facet_wrap(~., scales = "free_y", nrow = 2) +
+  theme_minimal() +
+  labs(
+    title = "Marital Status and Income Distribution",
+    y = "Marital Status",
+    x = "Count",
+    fill = "Income"
+  )
+
+```
+
+```{r occupation}
+p1 <- ggplot(adult) +
+  geom_bar(aes(y = occupation), position = "dodge") +
+  ggtitle("Occupation Comparison")
+
+p2 <- ggplot(adult) +
+  geom_bar(aes(y = occupation, fill = income), position = "dodge") +
+  ggtitle("Occupation Comparison with Income")
+
+grid.arrange(p1, p2, nrow = 2)
+
+```
+
+```{r relationship}
+p1 <- ggplot(adult) +
+  geom_bar(aes(x = relationship), position = "dodge") +
+  ggtitle("Relationship Comparison")
+
+p2 <- ggplot(adult) +
+  geom_bar(aes(x = relationship, fill = income), position = "dodge") +
+  ggtitle("Relationship Comparison with Income")
+
+grid.arrange(p1, p2, nrow = 2)
+```
+
+```{r race}
+p1 <- ggplot(adult) +
+  geom_bar(aes(x = race), position = "dodge") +
+  ggtitle("Race Comparison")
+
+p2 <- ggplot(adult) +
+  geom_bar(aes(x = race, fill = income), position = "dodge") +
+  ggtitle("Race Comparison with Income")
+
+grid.arrange(p1, p2, nrow = 2)
+```
+
+```{r sex}
+p1 <- ggplot(adult) +
+  geom_bar(aes(x = sex), position = "dodge") +
+  ggtitle("Sex Comparison")
+
+p2 <- ggplot(adult) +
+  geom_bar(aes(x = sex, fill = income), position = "dodge") +
+  ggtitle("Sex Comparison with Income")
+
+grid.arrange(p1, p2, nrow = 2)
+
+```
+
+```{r capital_gain}
+capital_gain <- adult %>%
+  filter(capital_gain != 0) %>%
+  ggplot(aes(x = capital_gain)) +
+  geom_density(fill = "lightblue", color = "darkgreen", alpha = 0.7) +
+  labs(x = "Capital Gain",
+       y = "Density",
+       title = "Distribution of Capital Gain",
+       fill = "Legend") +
+  theme_minimal()
+capital_gain
+```
+
+
+```{r capital_loss}
+capital_loss <- adult %>%
+  filter(capital_loss != 0) %>%
+  ggplot(aes(x = capital_loss)) +
+  geom_density(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  labs(x = "Capital Loss",
+       y = "Density",
+       title = "Distribution of Capital Loss",
+       fill = "Legend") +
+  theme_minimal()
+capital_loss
+```
+
+```{r hours_per_week}
+ggplot(adult, aes(x = hours_per_week, fill = ..density..)) +
+  geom_histogram(color = "black", alpha = 0.8, bins = 30) +
+  scale_fill_viridis_c() +
+  labs(
+    x = "Hours per Week",
+    y = "Density",
+    title = "Distribution of Weekly Working Hours",
+    fill = "Density"
+  ) +
+  theme_minimal()
+```
+
+```{r native_country}
+north_america <- c(" United-States", " Canada", " Outlying-US(Guam-USVI-etc)", " Mexico", " Puerto-Rico")
+asia <- c(" Cambodia", " China", " Hong", " India", " Iran", " Japan", " Laos", " Philippines", " Taiwan", " Thailand", " Vietnam")
+europe <- c(" England", " Holand-Netherlands", " France", " Germany", " Greece", " Hungary", " Ireland", " Italy", " Poland", " Portugal", " Scotland", " Yugoslavia")
+latin_america <- c(" Columbia", " Cuba", " Dominican-Republic", " Ecuador", " El-Salvador", " Guatemala", " Haiti", " Honduras", " Jamaica", " Peru", " Trinadad&Tobago")
+
+native_country <- adult %>%
+  group_by(native_country) %>%
+  summarise(count = n()) %>%
+  distinct(native_country, .keep_all = TRUE)
+
+native_country <- native_country %>%
+  mutate(
+    continent = case_when(
+      native_country %in% north_america ~ "North America",
+      native_country %in% asia ~ "Asia",
+      native_country %in% europe ~ "Europe",
+      native_country %in% latin_america ~ "Latin America",
+      TRUE ~ "Unknown"
+    )
+  ) %>%
+  group_by(continent) %>%
+  summarise(total_count = sum(count))
+
+ggplot(native_country, aes(continent, total_count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = continent)) +
+  geom_text(aes(label = total_count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Country of Origin",
+       fill = "Legend") +
+  theme_minimal()
+```
+
+
+
+
+
+
+```{r income}
+income <- adult %>%
+  group_by(income) %>%
+  summarise(income, count = n()) %>%
+  distinct(income, .keep_all = TRUE)
+
+ggplot(income, aes(income, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = income)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Frequency",
+       title = "Income Category Distribution",
+       fill = "Legend") +
+  theme_minimal()
+```
