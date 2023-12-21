@@ -1,0 +1,626 @@
+---
+title: "STA 305 FINAL PROJECT"
+author: 'Jacky Guan'
+date: 'Dec 10th, 2023'
+output: html_document
+---
+
+Loading required libraries, setting local working directory for reference.
+
+```{r setwd, message=FALSE, eval = FALSE, echo = FALSE}
+setwd("Documents/SEM\ 3/STA\ 305/Projects/Final\ Project")
+```
+```{r setup, message=FALSE, echo = FALSE}
+library(tidyverse)
+library(ggridges)
+library(gssr)
+library(labelled)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE,
+                      fig.align = "center", echo = FALSE)
+```
+
+### Introduction to the General Social Survey (GSS)
+
+The General Social Survey (GSS) stands as a monumental undertaking in the field of social research, 
+providing a comprehensive and longitudinal examination of the attitudes, behaviors, and demographic 
+characteristics of the American population. Initiated in 1972 by the National Opinion Research Center (NORC) 
+at the University of Chicago, the GSS has since evolved into one of the most influential and widely used 
+resources in the social sciences, shaping our understanding of societal trends and shifts over the past five decades.
+
+
+
+
+The idea of the GSS first came into play when the American scientific community realized there was a need for systematic and  
+in-depth data on the social fabric of our society. Developed under the best sociologists at the time, 
+the survey aimed to explore a diverse range of topics, including social inequality, 
+political participation, and cultural attitudes. Through a meticulously crafted questionnaire 
+traditinally asked during in-person interviews, the GSS sought to capture the nuances within the 
+dynamic nature of American social life.
+
+
+
+
+Over the years, the GSS has undergone methodological refinements and expansions to ensure its relevance 
+and reliability. The survey's scope has expanded to cover an extensive array of topics, from political 
+affiliations and religious beliefs to family dynamics and technological adoption. Researchers, policymakers, 
+and scholars have consistently turned to the GSS for its reliability when it comes to representing America, enabling 
+a deeper understanding of societal trends and informing evidence-based decision-making.
+
+
+
+
+However, the GSS, like many other aspects of life, faced an unprecedented challenge after the start of the 
+COVID-19 pandemic caused by the CCP virus. The global health crisis disrupted traditional modes of data collection, prompting the 
+GSS to adapt swiftly to ensure the continuity of its mission. The pandemic introduced new considerations, 
+such as the impact of social distancing measures on social interactions and the potential amplification of 
+existing inequalities in the face of health and economic challenges. At the same time, there were numerous 
+obstacles to overcome in upholding the quality of the historically robust dataset as in person interviews 
+were becoming increaingly challanging to overcome. Nevertheless, the GSS continues to be one of the 
+most important assets in social research and has become ever so diverse in covering avant-garde topics using 
+innovative methods. 
+
+
+
+
+In the subsequent sections of this research project, we will delve into specific facets of the General Social 
+Survey, examining its role in unraveling the intricacies of contemporary social phenomena. Through exploring the 
+rich and expansive dataset provided by the GSS, 
+
+COMPLETE THIS PART
+
+
+### Exploring Workplace Harassment in 2016
+
+In 2016, the General Social Survey (GSS) introduced a significant inquiry concerning workplace dynamics, 
+focusing on the prevalence of harassment at work. This pivotal question aimed to gauge respondents' 
+experiences with harassment from superiors or co-workers over the preceding five years, encompassing 
+instances of bullying, physical, or psychological abuse. The responses to this specific question are 
+stored within the "harass5" variable in the dataset from the year 2016.
+
+```{r get_2016}
+gss_16 <- gss_get_yr(2016)
+```
+
+
+
+As we look into the answers, our first questions aim to figure out how people responded to this 
+workplace harassment question. We want to know the different responses recieved by the survey and the frequency 
+of each answer. Through these inquiries, we aim to unravel some details pertaining to workplace harassment, shedding light on 
+both the overall prevalence and the nuanced gender dynamics within this critical facet of the professional realm.
+
+
+
+
+It seemed that harassment is not a topic applicable to almost half the people in the United States 
+back in 2016, where there was perhaps not as much attention given to a topic such as workplace 
+harassment. However, It seemed that for the other respondents, 
+1136 out of 2867 or about 39% of respondents said that 
+they have not experieced harassment at work. A small minority (3.3%) did not experience harassment purely due to 
+them not having anybody to be harassed by, and only 8.7%% of respondents said that 
+they have experienced harassment at work.
+
+```{r possibilities}
+harass_plot <- gss_16 %>%
+  mutate(harass5 = as.character(harass5)) %>%
+  select(harass5, sex) %>%
+  group_by(harass5) %>%
+  summarise(count = n()) %>%
+  mutate(harassment_status = case_when(
+    harass5 == "1" ~ "Experienced\n Harassment",
+    harass5 == "2" ~ "Not Experienced\n Harassment",
+    harass5 == "3" ~ "No Job/Superior/\nCo-Worker",
+    is.na(harass5) ~ "Not\n Applicable",
+    TRUE ~ as.character(harass5)
+  ))
+
+order_levels <- c("Experienced\n Harassment", "Not Experienced\n Harassment", "No Job/Superior/\nCo-Worker", "Not\n Applicable")
+
+harass_plot$harassment_status <- factor(harass_plot$harassment_status, levels = order_levels)
+
+ggplot(harass_plot, aes(harassment_status, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = harassment_status)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Answer to Question",
+       y = "Frequency",
+       title = "Exploring Workplace Experiences: Harassment Over the Last 5 Years",
+       subtitle = "GSS Survey Data from 2016",
+       fill = "Legend") +
+  theme_classic()
+```
+
+
+
+
+The next question is about finding out how common workplace harassment is among the people who answered this 
+question. Cases where people didn't respond or said the question didn't apply will not be considered.
+
+
+
+Out of those people who found the question to be relevant or applicable, 77% of respondents said that 
+they did not experience any workplace harassment. While 7% were not in a situation to even be able to be 
+harassed, 16% of this subset of respondents said that they were harassed at some point during 
+the past 5 years. 
+
+```{r pie_plot_harassment}
+filtered_data <- harass_plot %>%
+  filter(harass5 %in% c("1", "2", "3"))
+
+filtered_data <- filtered_data %>%
+  mutate(percentage = count / sum(count) * 100)
+
+pie_chart <- ggplot(filtered_data, aes(x = "", y = percentage, fill = harassment_status)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(percentage), "%")), position = position_stack(vjust = 0.5)) +
+  labs(title = "Prevalence of Workplace Harassment",
+       subtitle = "Among Respondents from GSS Survey 2016",
+       fill = "Legend") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 12))
+
+print(pie_chart)
+```
+
+
+
+
+Moving on, we're also looking at the gender breakdown among those who said they've experienced harassment. 
+We want to see the proportion of men and women who've been through workplace harassment, getting insights into 
+any differences based on gender.
+
+
+
+While it is true that a simple majority of those surveyed who have been through harassment were women 
+they do not dominate the field of being a victim, as women account for only 56% of those harassed, while 
+the remaining 44% in those who experienced harassment were men.
+
+
+```{r gender}
+gender_harassment <- gss_16 %>%
+  select(sex, harass5) %>%
+  mutate(harass5 = as.character(harass5)) %>%
+  mutate(sex = as.character(sex)) %>%
+  mutate(harassment_status = case_when(
+    harass5 == "1" ~ "Experienced\n Harassment",
+    harass5 == "2" ~ "Not Experienced\n Harassment",
+    harass5 == "3" ~ "No Job/Superior/\nCo-Worker",
+    is.na(harass5) ~ "Not\n Applicable",
+    TRUE ~ as.character(harass5)
+  )) %>%
+  mutate(sex = case_when(
+    sex == "1" ~ "Male",
+    sex == "2" ~ "Female",
+    TRUE ~ as.character(harass5)
+  )) %>%
+  filter(harass5 %in% c("1")) %>%
+  group_by(sex) %>%
+  summarise(count = n()) %>%
+  mutate(proportion = count / sum(count))
+
+
+tibble(gender_harassment)
+```
+
+
+
+
+### Family Origin
+
+> What is your country of Family Origin
+
+
+America is the melting pot of the world. It is historically known as the land of immigrants 
+and has perhaps so forged one of the most powerful economies of the world. Perhaps due to this 
+positive feedback look, America has attracted people from a diverse range of people from around the world. 
+
+
+
+
+
+Renowned for its historical role as a diverse nation of immigrants, the U.S. has undergone 
+demographic shifts key to shaping the composition of American families. This next section will 
+investigate changes in family origin patterns in the United States from the mid 1990s to the 
+late 2010s. Analyzing data over time, 
+our graphical representation aims to offer insights into the evolution of family origin dynamics.
+
+
+```{r aquire_years}
+family_origin_list <- list()
+
+for (year in c(1998, 2004, 2010, 2016, 2018)) {
+  gss_data <- gss_get_yr(year)
+
+  processed_data <- gss_data %>%
+    mutate(ethnic = labelled::to_character(ethnic)) %>%
+    group_by(ethnic) %>%
+    summarise(count = n())
+
+  family_origin_list[[as.character(year)]] <- processed_data
+}
+
+data_combined <- bind_rows(family_origin_list, .id = "Year") %>%
+  pivot_wider(names_from = ethnic, values_from = count) %>%
+  select(Year, everything())
+
+
+df_long <- tidyr::gather(data_combined, key = "ethnicity", value = "count", -Year)
+
+# Filter the top 10 most popular countries
+df_top10 <- df_long %>%
+  filter(ethnicity != "NA") %>%
+  group_by(ethnicity) %>%
+  summarise(total_count = sum(count)) %>%
+  top_n(10, wt = total_count) %>%
+  inner_join(df_long, by = "ethnicity")
+
+# Create a dot plot for the top 10 countries
+ggplot(df_top10, aes(x = as.numeric(Year), y = count, color = ethnicity)) +
+  geom_point() +
+  geom_line(aes(group = ethnicity), linetype = "dashed") +
+  labs(title = "Trend of Top 10 Most Common Ethnic Backgrounds Over Time",
+       x = "Year",
+       y = "Count",
+       color = "Ethnicity") +
+  theme_minimal()
+```
+
+
+The comprehensive analysis of ethnic background trends in the United States over 
+the past two decade reveals intriguing shifts that shape the nation's demographic landscape. 
+Notably, there is a discernible decline in individuals of European origin, particularly 
+from countries such as Ireland, Germany, and Italy. This downward trajectory suggests 
+evolving migration patterns or assimilation trends within these communities. Concurrently, 
+the emergence of a growing Mexican population stands out as a prominent feature, indicating a 
+dynamic transformation in the ethnic composition of the country.
+
+
+
+
+The observation that American Indian backgrounds are also experiencing a decline prompts 
+further investigation into the factors influencing this shift. Perhaps this is due to a 
+exacerbated cultural dilution in recent years which accelerated the dissapearance of the 
+indigenous people, or simply due to a reduced number of people willig to identify with the ethnic group. 
+
+
+
+It is interesting to note that the American only population is also in decline over the past two decades. 
+For one, this might be due to the number of people, under the influence of societal norms 
+and popular culture, who wish to expound on their diverse family background and 
+stand proudly as a member of their own ethnic group. At the same time, it might 
+have something to do with the decline in nationalism in the United States, which causes 
+less Americans to identify with their own country. 
+
+
+
+
+At the same time, it is interesting that the number of people who identified as being African suddenly increased 
+at a rate greater than the other countries in 2016. While an increase in immigrants could be a potential factor, 
+cultural influences such as a African-American president leaving the office could ignitige cultural trends 
+that will influence the people's opinion. 
+
+
+
+
+It is important to note that given my limited technical expertise and the sheer difficulty of this assignment, 
+it was not possible to plot the relative percentages of the various datapoints which causes this graph to 
+be a little difficult to read. Durin these few years selected, the GSS dataset consistently hovered around the 2500 
+respondent mark, which means that despite the numbers being emperically different, it is still possible for one to draw 
+graphical conclusions. 
+Notwithstanding, the ten most popular countries of origin, especially Mexico, wield a substantial influence on the overall 
+demographic makeup. The high population of these countries, their geographic location, or even the language thereof 
+all likely contributes to said culture's prominence in the United States. 
+
+
+
+
+### Public Opinion on China in 1994
+
+
+> How much do you like China
+
+```{r china_load}
+gss_94 <- gss_get_yr(1994)
+```
+
+In 1994, the relationship between the United States and China underwent significant developments, 
+marked by a complex interplay of diplomatic engagements, economic ties, and regional dynamics. 
+Against the backdrop of a post-Cold War era, both nations sought to redefine their relationship within 
+the shifting global geopolitical landscape. One pivotal event during this period was the formalization 
+of diplomatic ties through the establishment of the U.S.-China Joint Liaison Group, providing a 
+structured platform for ongoing dialogue between the two nations. This diplomatic initiative laid the 
+groundwork for addressing mutual concerns and fostering a framework for cooperation.
+
+
+
+
+Economic considerations played a crucial role in shaping the relationship as well, with the normalization 
+of trade relations between the United States and China in 1994. The conclusion of the U.S.-China trade 
+agreement paved the way for increased economic collaboration and trade liberalization, setting the stage 
+for the subsequent expansion of bilateral trade between the two nations. Concurrently, China's economic 
+reforms and opening-up policies were gaining momentum, contributing to its growing integration into the global economy.
+
+
+
+
+The regional landscape was further influenced by the complex issue of Taiwan. In 1994, the 
+United States and China navigated a delicate situation following President Bill Clinton's 
+approval of a U.S. visa for Taiwan's President Lee Teng-hui. This decision stirred tensions, 
+prompting a recalibration of diplomatic engagements and highlighting the intricacies of managing 
+relationships in the Asia-Pacific region. The events of 1994 thus reflect a pivotal juncture in 
+U.S.-China relations, characterized by diplomatic milestones, economic cooperation, and the careful 
+negotiation of regional dynamics.
+
+
+
+
+Analysts today would argue that the United States, while remaining hopeful to influence communist China 
+with Western money and as a supposed consequence, democracy, has failed to stop the expansion of communism 
+and made the totalitarian regime rich while almost 700 million Chinese live with a monthly salary not far from 
+$140. But when this pivotal moment in history began, what did the public think of China?
+
+
+```{r china_opinion}
+china_94 <- gss_94 %>%
+  select(china, sex) %>%
+  mutate(opinion = case_when(
+    china == 0 ~ "+5",
+    china == 1 ~ "+4",
+    china == 2 ~ "+3",
+    china == 3 ~ "+2",
+    china == 4 ~ "+1",
+    china == 5 ~ "-1",
+    china == 6 ~ "-2",
+    china == 7 ~ "-3",
+    china == 8 ~ "-4",
+    china == 9 ~ "-5",
+    TRUE ~ NA_character_
+  ))
+
+by_liking <- china_94 %>%
+  group_by(opinion) %>%
+  summarize(count = n()) %>%
+  filter(!is.na(opinion)) %>%
+  mutate(opinion = factor(opinion, levels = c("-5", "-4", "-3", "-2", "-1", "+1", "+2", "+3", "+4", "+5")))
+
+
+ggplot(by_liking, aes(opinion, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = opinion)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Response",
+       y = "Absolute Frequency",
+       title = "Public Opinion of China in 1994",
+       subtitle = "Data after excluding indifferent responses",
+       fill = "Legend") +
+  theme_minimal()
+```
+
+
+
+In general, the public opinion was not very favorable towards China, as a simple majority of people (254/478 or 
+53.1%) held negative or very negative views towards China. At the same time, most people did not hold extremely 
+negative or positive views towards China in 1994. In fact, most people did not have a view on China at all, as there were 
+2514/2992 or 84% of respondents who simply declined to comment. 
+
+
+
+This might be due to China being an overall sensitive topic or a topic so intangible for the average 
+American that they simply did not know what kind of an honest answer they would give. It is interesting 
+to note that for the those who decided to comment on the China issue, it is very likely that a person 
+chosen at random was in the +1 category, or in the category which was slightly favorable of China. This might 
+be due to China's reform and opening up and with the collapse of the Soviet Union, some Americans 
+hoped that China would cast away their red past and adapt to democracy. 
+
+
+
+```{r have_opinion}
+by_gender <- china_94 %>%
+  group_by(sex, opinion) %>%
+  summarize(count = n()) %>%
+  filter(!is.na(opinion)) %>%
+  mutate(opinion = factor(opinion, levels = c("-5", "-4", "-3", "-2", "-1", "+1", "+2", "+3", "+4", "+5"))) %>%
+  mutate(gender = case_when(
+    sex == 1 ~ "Male",
+    sex == 2 ~ "Female"
+  ))
+
+ggplot(by_gender, aes(x = opinion, y = count, fill = opinion)) +
+  geom_bar(stat = "identity") +
+  facet_grid(. ~ gender) +
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 4, color = "black") +
+  labs(
+    x = "Response",
+    y = "Frequency",
+    title = "Public Opinion of China in 1994 by Gender",
+    subtitle = "Data after excluding indifferent responses",
+    fill = "Opinion"
+  ) +
+  theme(
+    legend.position = "none"
+  ) +
+  theme_minimal()
+```
+
+
+In this sample, Women, who are traditionally less interested in politics than men, 
+were more inclined to comment on this issue. On the one side, it might be that women have a general tendency 
+to have an opinion on most subjects or that the number of women in the United States is simply 
+greater than that of men. On the other hand, it might be becuase the Men, while they watch the news 
+and see what's going on in the world and how the American government is interacting with the Chinese 
+government, that they become more cautious when commenting on current affairs. 
+
+
+
+
+It is interesting to note that this question has never been asked again 
+
+
+
+
+
+
+### How does the US "Work" in 2018
+
+
+```{r get_2018}
+gss_18 <- gss_get_yr(2018)
+```
+
+
+
+In 2018, the United States witnessed several significant economic 
+events that played a crucial role in shaping the employment landscape and overall 
+economic conditions, which many would attribute to the election of Donald J. Trump 
+and the associated economic policies.
+
+
+
+
+
+#### Tax Cuts and Jobs Act (TCJA):
+One of the most impactful economic developments in 2018 was the implementation 
+of the Tax Cuts and Jobs Act. Enacted in December 2017, this sweeping tax reform 
+brought about significant changes to the tax structure, including corporate tax 
+rate reductions and modifications to individual tax brackets. The aim was to 
+stimulate economic growth, encourage job creation, and boost overall productivity. 
+The TCJA had widespread implications for businesses and individuals alike, influencing 
+hiring trends and workforce dynamics.
+
+
+
+
+
+#### Low Unemployment Rates:
+Throughout 2018, the United States experienced historically low unemployment rates. 
+The job market thrived, with unemployment reaching levels not seen in decades. The robust 
+labor market presented opportunities for job seekers, with employers competing for talent 
+across various industries. This economic environment contributed to a dynamic and competitive 
+job market, influencing individuals' decisions regarding employment, career choices, and 
+work-life balance.
+
+
+
+
+
+#### Trade Tensions and Tariffs:
+The escalating trade tensions between the United States and its major trading partners, 
+particularly China, marked a defining economic feature of 2018. The imposition of tariffs 
+and retaliatory measures had a direct impact on certain industries and sectors, influencing 
+business strategies and employment patterns. The uncertainties surrounding international 
+trade relations during this period had implications for job stability and the overall economic 
+outlook, prompting individuals and businesses to adapt to changing market conditions.
+
+
+
+The question remains: does the data support the research?
+
+
+```{r employment_data}
+employment <- gss_18 %>%
+  select(wrkstat, childs) %>%
+  mutate(work = labelled::to_character(wrkstat)) %>%
+  mutate(
+    work = factor(
+      case_when(
+        work == "working full time" ~ "Full-Time",
+        work == "working part time" ~ "Part-Time",
+        work == "with a job, but not at work because of temporary illness, vacation, strike" ~ "Temp\nLeave",
+        work == "unemployed, laid off, looking for work" ~ "Unemployed",
+        work == "retired" ~ "Retired",
+        work == "in school" ~ "In School",
+        work == "keeping house" ~ "Keeping\nHouse",
+        TRUE ~ "Other"
+      ),
+      levels = c("Full-Time", "Part-Time", "Temp\nLeave", "Unemployed", "Retired", "In School", "Keeping\nHouse", "Other")
+    )
+  )
+```
+
+Under these conditions, the employment data from the GSS provides a robust dataframe for analysis. It is 
+not difficult to see that a majority (59%) of pepole are either working full time or part time in 2018 
+and that the employment rate of 3.5% is a clear indicator of a healthy economy. At the same time, 19% of 
+respondents were retired, which accounts for almost 1/5 of the economy. This is within the bounds of 
+a normal and well-functioning economy. 
+
+
+```{r employment_modified}
+pure_work <- employment %>%
+  group_by(work) %>%
+  summarize(count = n()) %>%
+  filter(!is.na(work))
+
+
+ggplot(pure_work, aes(work, count)) +
+  geom_bar(stat = "identity", position = "identity", aes(fill = work)) +
+  geom_text(aes(label = count), vjust = -0.5, color = "black", size = 4) +
+  labs(x = "Work Status",
+       y = "Frequency",
+       title = "Work Status Data in 2018",
+       subtitle = "Excluding NA Values",
+       fill = "Legend") +
+  theme_classic()
+```
+
+
+
+Often times, it is easier to visualize and quantify issues using alternative forms of graphs, which can be seen below. Here it is easier to 
+see that almost half of the American population is working full time. On a side note, a significant amount of people (10%) simply stay at home 
+and do housekeeping, which might also be an indication that the economy is doing well since a person can stay at home in the house while the 
+other brings in the money. 
+
+```{r work_pie}
+ggplot(pure_work, aes(x = "", y = count, fill = work)) +
+  geom_bar(stat = "identity", position = "fill") +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = count), position = position_fill(vjust = 0.5), size = 4) +
+  labs(title = "Work Status Distribution in 2018",
+       subtitle = "Excluding NA Values",
+       fill = "Work Status") +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = "bottom")
+```
+
+
+
+### Conclusion and Closing Remarks
+
+
+
+In the course of this project, the relatively short duration posed a challenge in fully 
+exploring and visualizing complex datasets using R. The limited proficiency in R further 
+constrained the capacity to create sophisticated visualizations that could provide a 
+comprehensive overview of the data. Despite these constraints, efforts were directed towards 
+finding engaging topics and subsequently seeking relevant data to support the findings. 
+The project aimed to derive insights into public sentiments towards China in 1994, assess the 
+economic landscape of the United States in 2018, and explore the shifting demographic patterns, 
+particularly the increasing presence of Mexicans in the United States.
+
+
+Through this project and exploring the gigantic gss dataset, 
+it became apparent that the data suggested a general lack of substantial 
+interest in China among the surveyed population in 1994. In 2018, the available data 
+indicated a robust and flourishing American economy. Furthermore, a notable observation 
+emerged regarding the demographic trends, with an apparent rise in the Mexican population 
+in the United States. 
+
+
+
+However, it is crucial to acknowledge the inherent complexity and nuance 
+in these issues. Demographics, the economy, and geopolitical sentiments are not issues that 
+can be expressed using 1's and 0's, but something which can be supported through data. This is why 
+research was always conducted first prior to the visualization of data. 
+
+
+
+
+It is due to the fact that limitations of drawing definitive conclusions based solely on data 
+underscored the need for a more comprehensive and multifaceted approach to understanding the 
+dynamics of public opinion, economic conditions, and demographic shifts. The project, while 
+providing valuable insights, recognized the intricate nature of these topics and the challenges 
+in making conclusive statements based solely on quantitative data.
